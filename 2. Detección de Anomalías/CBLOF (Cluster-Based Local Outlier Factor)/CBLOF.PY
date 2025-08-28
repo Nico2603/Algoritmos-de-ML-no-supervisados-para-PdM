@@ -366,33 +366,28 @@ def calcular_metricas_adicionales(modelo: CBLOF, X_escalado: np.ndarray) -> Dict
     Returns:
         Diccionario con las métricas calculadas
     """
-    labels = modelo.labels_
+    # CORRIGIDO: En PyOD, labels_ es 0/1 (normal/outlier), no cluster IDs
+    binary_labels = modelo.labels_  # 0: normal, 1: outlier
     anomaly_scores = modelo.decision_scores_
     
-    n_clusters = len(np.unique(labels))
-    n_anomalias = np.sum(labels)
-    porcentaje_anomalias = (n_anomalias / len(labels)) * 100
+    # Calcular métricas de anomalías correctamente
+    n_anomalias = np.sum(binary_labels)
+    porcentaje_anomalias = (n_anomalias / len(binary_labels)) * 100
     
-    # Calcular distancias intra-cluster
-    distancias_intra_cluster = []
-    for cluster_id in np.unique(labels):
-        indices_cluster = np.where(labels == cluster_id)[0]
-        if len(indices_cluster) > 1:
-            cluster_puntos = X_escalado[indices_cluster]
-            centroide = np.mean(cluster_puntos, axis=0)
-            distancias = np.linalg.norm(cluster_puntos - centroide, axis=1)
-            distancia_media = np.mean(distancias)
-            distancias_intra_cluster.append(distancia_media)
-            logging.info(f"Distancia intra-cluster para el cluster {cluster_id}: {distancia_media:.4f}")
+    # Para CBLOF, no podemos calcular métricas de clustering tradicionales
+    # porque no tenemos acceso directo a los cluster IDs del clustering interno
+    logging.info(f"Anomalías detectadas: {n_anomalias} ({porcentaje_anomalias:.2f}%)")
+    logging.info(f"Rango de scores de anomalía: {np.min(anomaly_scores):.4f} - {np.max(anomaly_scores):.4f}")
     
     media_puntuaciones_anomalia = np.mean(anomaly_scores)
     
     return {
-        'n_clusters': n_clusters,
         'n_anomalias': n_anomalias,
         'porcentaje_anomalias': porcentaje_anomalias,
-        'distancias_intra_cluster': distancias_intra_cluster,
-        'media_puntuaciones_anomalia': media_puntuaciones_anomalia
+        'media_puntuaciones_anomalia': media_puntuaciones_anomalia,
+        'min_score': np.min(anomaly_scores),
+        'max_score': np.max(anomaly_scores),
+        'std_score': np.std(anomaly_scores)
     }
 
 
@@ -419,14 +414,14 @@ def guardar_metricas(metricas: Dict[str, Any], metricas_adicionales: Dict[str, A
         f.write(f"Davies-Bouldin Score: {metricas['davies_bouldin_score']:.4f}\n\n")
         
         f.write("Métricas de anomalías:\n")
-        f.write(f"Número de clusters: {metricas_adicionales['n_clusters']}\n")
         f.write(f"Número de anomalías detectadas: {metricas_adicionales['n_anomalias']}\n")
         f.write(f"Porcentaje de anomalías detectadas: {metricas_adicionales['porcentaje_anomalias']:.4f}%\n")
         f.write(f"Media de puntuaciones de anomalía: {metricas_adicionales['media_puntuaciones_anomalia']:.4f}\n\n")
         
-        f.write("Distancias intra-cluster:\n")
-        for idx, distancia in enumerate(metricas_adicionales['distancias_intra_cluster']):
-            f.write(f"Cluster {idx}: {distancia:.4f}\n")
+        f.write("Estadísticas de puntuaciones:\n")
+        f.write(f"Score mínimo: {metricas_adicionales['min_score']:.4f}\n")
+        f.write(f"Score máximo: {metricas_adicionales['max_score']:.4f}\n")
+        f.write(f"Desviación estándar: {metricas_adicionales['std_score']:.4f}\n")
     
     logging.info(f"Métricas guardadas en {ruta_metricas}")
 
@@ -537,12 +532,14 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
         directorio_metricas: Directorio donde guardar el archivo
     """
     try:
-        labels_visualizacion = np.where(modelo.labels_ == 0, 0, 1)
-        anomalias = datos[labels_visualizacion == 1].copy()
+        # En PyOD, labels_ ya es 0/1 (normal/outlier)
+        anomalias = datos[modelo.labels_ == 1].copy()
         
         if not anomalias.empty:
-            anomalias['puntuacion_anomalia'] = modelo.decision_scores_[labels_visualizacion == 1]
-            anomalias = anomalias.sort_values('puntuacion_anomalia', ascending=False)
+            # Estandarizar nombres de columnas
+            anomalias['anomaly_score'] = modelo.decision_scores_[modelo.labels_ == 1]
+            anomalias['is_outlier'] = 1
+            anomalias = anomalias.sort_values('anomaly_score', ascending=False)
             
             ruta_anomalias_csv = directorio_metricas / ARCHIVO_ANOMALIAS
             anomalias.to_csv(ruta_anomalias_csv, index=False)

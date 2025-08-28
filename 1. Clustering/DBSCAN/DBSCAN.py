@@ -584,6 +584,42 @@ class DetectorAnomalias:
     """Detector y analizador de anomalías."""
     
     @staticmethod
+    def calcular_scores_todos_los_puntos(etiquetas: np.ndarray, X_escalado: np.ndarray, 
+                                       modelo: DBSCAN) -> np.ndarray:
+        """
+        Calcula scores de anomalía para todos los puntos.
+        
+        Args:
+            etiquetas: Etiquetas de clusters
+            X_escalado: Datos escalados
+            modelo: Modelo DBSCAN entrenado
+            
+        Returns:
+            Array con scores de anomalía para todos los puntos
+        """
+        scores = np.zeros(len(etiquetas))
+        
+        if hasattr(modelo, 'core_sample_indices_') and len(modelo.core_sample_indices_) > 0:
+            # Calcular distancias a puntos núcleo para todos los puntos
+            indices_nucleo = modelo.core_sample_indices_
+            distancias_a_nucleo = pairwise_distances(X_escalado, X_escalado[indices_nucleo])
+            distancias_minimas = np.min(distancias_a_nucleo, axis=1)
+            
+            # Para puntos de ruido: distancia mínima a núcleos (alta = más anómalo)
+            # Para puntos núcleo: distancia = 0 (menos anómalo)
+            # Para puntos frontera: distancia baja a núcleos (menos anómalo que ruido)
+            scores = distancias_minimas
+            
+            # Asignar score especial a puntos núcleo (score mínimo)
+            scores[indices_nucleo] = 0.0
+        else:
+            # Si no hay puntos núcleo, asignar scores basados en etiquetas
+            scores[etiquetas == -1] = 1.0  # Ruido = score alto
+            scores[etiquetas != -1] = 0.0  # Clusters = score bajo
+        
+        return scores
+    
+    @staticmethod
     def identificar_anomalias(datos: pd.DataFrame, etiquetas: np.ndarray, 
                             X_escalado: np.ndarray, modelo: DBSCAN, 
                             directorio_metricas: str) -> None:
@@ -598,67 +634,41 @@ class DetectorAnomalias:
             directorio_metricas: Directorio donde guardar los resultados.
         """
         try:
+            # Calcular scores para todos los puntos
+            anomaly_scores = DetectorAnomalias.calcular_scores_todos_los_puntos(etiquetas, X_escalado, modelo)
+            
+            # Crear DataFrame con todos los datos y scores
+            datos_con_scores = datos.copy()
+            datos_con_scores['anomaly_score'] = anomaly_scores
+            datos_con_scores['is_outlier'] = (etiquetas == -1).astype(int)
+            datos_con_scores['cluster_id'] = etiquetas
+            
+            # Guardar todos los datos con scores
+            ruta_scores = os.path.join(directorio_metricas, 'scores_dbscan.csv')
+            datos_con_scores.to_csv(ruta_scores, index=False)
+            logging.info(f"Scores de todos los puntos guardados en: {ruta_scores}")
+            
             # Identificar anomalías (ruido)
-            anomalias = datos[etiquetas == -1].copy()
+            anomalias = datos_con_scores[etiquetas == -1].copy()
             
             if len(anomalias) == 0:
                 logging.info("No se detectaron anomalías")
                 return
             
-            # Guardar anomalías básicas
-            ruta_anomalias = os.path.join(directorio_metricas, 'anomalias.csv')
-            anomalias.to_csv(ruta_anomalias, index=False)
+            # Guardar solo anomalías ordenadas por score
+            anomalias_ordenadas = anomalias.sort_values('anomaly_score', ascending=False)
+            ruta_anomalias = os.path.join(directorio_metricas, 'anomalies.csv')
+            anomalias_ordenadas.to_csv(ruta_anomalias, index=False)
             logging.info(f"Anomalías guardadas en: {ruta_anomalias}")
             
-            # Calcular puntuación de anomalías si hay muestras núcleo
-            if hasattr(modelo, 'core_sample_indices_') and len(modelo.core_sample_indices_) > 0:
-                DetectorAnomalias._calcular_puntuaciones_anomalias(
-                    anomalias, etiquetas, X_escalado, modelo, directorio_metricas
-                )
-            
             logging.info(f"Total de anomalías detectadas: {len(anomalias)}")
+            logging.info(f"Score promedio de anomalías: {np.mean(anomalias['anomaly_score']):.4f}")
+            logging.info(f"Score máximo de anomalía: {np.max(anomalias['anomaly_score']):.4f}")
+            
         except Exception as e:
             logging.error(f"Error identificando anomalías: {str(e)}")
     
-    @staticmethod
-    def _calcular_puntuaciones_anomalias(anomalias: pd.DataFrame, etiquetas: np.ndarray,
-                                        X_escalado: np.ndarray, modelo: DBSCAN,
-                                        directorio_metricas: str) -> None:
-        """
-        Calcula puntuaciones de anomalías basadas en distancias a muestras núcleo.
-        
-        Args:
-            anomalias: DataFrame con anomalías.
-            etiquetas: Etiquetas de clusters.
-            X_escalado: Datos escalados.
-            modelo: Modelo DBSCAN entrenado.
-            directorio_metricas: Directorio donde guardar resultados.
-        """
-        try:
-            indices_anomalias = np.where(etiquetas == -1)[0]
-            indices_nucleo = modelo.core_sample_indices_
-            
-            distancias_a_nucleo = pairwise_distances(
-                X_escalado[indices_anomalias], 
-                X_escalado[indices_nucleo]
-            )
-            distancias_minimas = np.min(distancias_a_nucleo, axis=1)
-            
-            anomalias_con_puntuacion = anomalias.copy()
-            anomalias_con_puntuacion['puntuacion_anomalia'] = distancias_minimas
-            
-            # Ordenar por puntuación (mayor puntuación = más anómalo)
-            anomalias_con_puntuacion = anomalias_con_puntuacion.sort_values(
-                'puntuacion_anomalia', ascending=False
-            )
-            
-            ruta_anomalias_puntuadas = os.path.join(directorio_metricas, 'anomalias_con_puntuacion.csv')
-            anomalias_con_puntuacion.to_csv(ruta_anomalias_puntuadas, index=False)
-            
-            logging.info(f"Anomalías con puntuación guardadas en: {ruta_anomalias_puntuadas}")
-            logging.info(f"Puntuación promedio de anomalías: {np.mean(distancias_minimas):.4f}")
-        except Exception as e:
-            logging.error(f"Error calculando puntuaciones de anomalías: {str(e)}")
+
 
 def main():
     """Función principal que ejecuta todo el pipeline de clustering DBSCAN."""

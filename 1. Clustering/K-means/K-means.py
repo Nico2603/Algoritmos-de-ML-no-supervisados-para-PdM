@@ -310,15 +310,16 @@ class KMeansAnalyzer:
         self.kmeans_final = KMeans(n_clusters=k_optimo, random_state=RANDOM_STATE, n_init='auto')
         self.kmeans_final.fit(self.X_escalado)
         
-        # Extraer métricas
-        self.labels = resultado_optimo[5]
-        self.cluster_centers = resultado_optimo[6]
+        # CORRIGIDO: Usar labels del modelo final entrenado en el dataset completo
+        self.labels = self.kmeans_final.labels_
+        self.cluster_centers = self.kmeans_final.cluster_centers_
+        # Recalcular métricas para el modelo final en dataset completo
         self.metricas_finales = {
             'k_optimo': k_optimo,
-            'inertia': resultado_optimo[1],
-            'silhouette': resultado_optimo[2],
-            'calinski_harabasz': resultado_optimo[3],
-            'davies_bouldin': resultado_optimo[4]
+            'inertia': self.kmeans_final.inertia_,
+            'silhouette': silhouette_score(self.X_escalado, self.labels),
+            'calinski_harabasz': calinski_harabasz_score(self.X_escalado, self.labels),
+            'davies_bouldin': davies_bouldin_score(self.X_escalado, self.labels)
         }
         
         logging.info("Modelo K-Means entrenado con el número óptimo de clusters.")
@@ -337,7 +338,10 @@ class KMeansAnalyzer:
         distancias = np.linalg.norm(
             self.X_escalado - self.cluster_centers[self.labels], axis=1
         )
-        self.datos['puntuacion_anomalia'] = distancias
+        # Estandarizar nombres de columnas
+        self.datos['anomaly_score'] = distancias  # Score estándar
+        self.datos['is_outlier'] = 0  # K-Means no detecta outliers binarios
+        self.datos['cluster_id'] = self.labels  # ID del cluster asignado
         logging.info("Puntuación de anomalías calculada para cada punto de datos.")
     
     def guardar_resultados(self) -> None:
@@ -351,9 +355,24 @@ class KMeansAnalyzer:
             f.write(f"Davies-Bouldin Score: {self.metricas_finales['davies_bouldin']:.4f}\n")
             f.write(f"Inercia (SSE): {self.metricas_finales['inertia']:.2f}\n")
         
-        # Guardar puntuaciones de anomalías
-        ruta_anomalias = os.path.join(self.directorio_metricas, 'anomaly_scores.csv')
-        self.datos.to_csv(ruta_anomalias, index=False)
+        # Guardar puntuaciones de anomalías con nombres estandarizados
+        ruta_scores = os.path.join(self.directorio_metricas, 'scores_kmeans.csv')
+        self.datos.to_csv(ruta_scores, index=False)
+        
+        # Guardar métricas en CSV estándar
+        ruta_metricas_csv = os.path.join(self.directorio_metricas, 'metrics.csv')
+        metricas_df = pd.DataFrame([{
+            'algoritmo': 'K-Means',
+            'k_clusters': self.metricas_finales['k_optimo'],
+            'silhouette_score': self.metricas_finales['silhouette'],
+            'calinski_harabasz_score': self.metricas_finales['calinski_harabasz'],
+            'davies_bouldin_score': self.metricas_finales['davies_bouldin'],
+            'inertia': self.metricas_finales['inertia'],
+            'n_anomalias': 0,  # K-Means no detecta anomalías binarias
+            'porcentaje_anomalias': 0.0,
+            'media_anomaly_score': np.mean(self.datos['anomaly_score'])
+        }])
+        metricas_df.to_csv(ruta_metricas_csv, index=False)
         
         # Guardar modelo como pickle
         ruta_modelo_pkl = os.path.join(self.directorio_modelos, 'kmeans_model.pkl')
@@ -366,7 +385,8 @@ class KMeansAnalyzer:
             hf.create_dataset('labels', data=self.labels)
         
         logging.info(f"Métricas guardadas en {ruta_metricas}")
-        logging.info(f"Puntuaciones de anomalías guardadas en {ruta_anomalias}")
+        logging.info(f"Scores guardados en {ruta_scores}")
+        logging.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         logging.info(f"Modelo guardado como pickle en {ruta_modelo_pkl}")
         logging.info(f"Modelo guardado como h5 en {ruta_modelo_h5}")
     

@@ -236,7 +236,8 @@ def evaluar_modelo_isolation_forest(params: Dict[str, Any], X_escalado: np.ndarr
         clf.fit(X_escalado)
         
         # Obtener predicciones
-        scores = clf.decision_function(X_escalado)
+        # CORRIGIDO: Invertir el score para que mayor valor = más anómalo
+        scores = -clf.decision_function(X_escalado)  # Invertir para score consistente
         etiquetas = clf.predict(X_escalado)
         etiquetas = np.where(etiquetas == 1, 0, 1)  # 0: normal, 1: anomalía
         
@@ -438,8 +439,9 @@ def guardar_anomalias(datos_originales: pd.DataFrame, etiquetas: np.ndarray,
         ruta_archivo: Ruta donde guardar el archivo
     """
     anomalias = datos_originales[etiquetas == 1].copy()
-    anomalias['puntuacion_anomalia'] = scores[etiquetas == 1]
-    anomalias = anomalias.sort_values('puntuacion_anomalia', ascending=True)
+    anomalias['anomaly_score'] = scores[etiquetas == 1]  # Estandarizado: anomaly_score
+    anomalias['is_outlier'] = 1  # Estandarizado: is_outlier
+    anomalias = anomalias.sort_values('anomaly_score', ascending=False)  # Mayor score = más anómalo
     anomalias.to_csv(ruta_archivo, index=False)
 
 
@@ -492,7 +494,8 @@ def main() -> None:
         modelo_final.fit(X_escalado)
         
         # Hacer predicciones con el modelo final en el dataset completo
-        scores_pred = modelo_final.decision_function(X_escalado)
+        # CORRIGIDO: Invertir el score para que mayor valor = más anómalo
+        scores_pred = -modelo_final.decision_function(X_escalado)  # Invertir para score consistente
         etiquetas_pred = modelo_final.predict(X_escalado)
         etiquetas_pred = np.where(etiquetas_pred == 1, 0, 1)
         
