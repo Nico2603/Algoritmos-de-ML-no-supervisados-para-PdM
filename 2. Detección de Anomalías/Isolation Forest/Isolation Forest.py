@@ -31,7 +31,8 @@ from joblib import Parallel, delayed
 # Suprimir warnings innecesarios
 warnings.filterwarnings('ignore', category=FutureWarning)
 
-# Constantes
+# Constantes (100% no-supervisado)
+USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 NOMBRE_ARCHIVO_DATOS = 'data.csv'
 EXTENSION_MODELO_PKL = 'isolation_forest_model.pkl'
@@ -101,7 +102,7 @@ def configurar_logging(ruta_archivo_log: Path) -> logging.Logger:
 
 def cargar_datos(ruta_datos: Path) -> pd.DataFrame:
     """
-    Carga los datos desde archivo CSV con validación.
+    Carga los datos desde archivo CSV con validación (100% no-supervisado).
     
     Args:
         ruta_datos: Ruta al archivo de datos
@@ -117,9 +118,43 @@ def cargar_datos(ruta_datos: Path) -> pd.DataFrame:
         raise FileNotFoundError(f"No se encontró el archivo de datos: {ruta_datos}")
     
     try:
-        datos = pd.read_csv(ruta_datos)
+        # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
+        try:
+            datos = pd.read_csv(
+                ruta_datos, 
+                usecols=USECOLS, 
+                parse_dates=['fecha'], 
+                dayfirst=True,
+                dtype={
+                    'acceleration_x': 'float32',
+                    'acceleration_y': 'float32', 
+                    'acceleration_z': 'float32'
+                }
+            )
+        except UnicodeDecodeError:
+            datos = pd.read_csv(
+                ruta_datos, 
+                usecols=USECOLS, 
+                parse_dates=['fecha'], 
+                dayfirst=True,
+                dtype={
+                    'acceleration_x': 'float32',
+                    'acceleration_y': 'float32', 
+                    'acceleration_z': 'float32'
+                },
+                encoding='latin-1'
+            )
+            print("Archivo cargado con encoding latin-1")
+        
         if datos.empty:
             raise ValueError("El archivo de datos está vacío")
+        
+        # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
+        datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
+        
+        # Ordenar por fecha (recomendable)
+        datos.sort_values('fecha', inplace=True)
+        
         return datos
     except Exception as e:
         raise ValueError(f"Error al cargar los datos: {e}")
@@ -241,54 +276,30 @@ def evaluar_modelo_isolation_forest(params: Dict[str, Any], X_escalado: np.ndarr
         etiquetas = clf.predict(X_escalado)
         etiquetas = np.where(etiquetas == 1, 0, 1)  # 0: normal, 1: anomalía
         
-        # Calcular métricas básicas
+        # CORRIGIDO: Usar separación de percentiles en lugar de media
+        # Calcular separación entre anomalías y normales
+        p95_score = np.percentile(scores, 95)
+        p50_score = np.percentile(scores, 50)
+        separacion_scores = p95_score - p50_score
+        
+        # Métricas adicionales
         n_anomalias = np.sum(etiquetas)
         porcentaje_anomalias = (n_anomalias / len(etiquetas)) * 100
-        media_scores = np.mean(scores)
+        std_scores = np.std(scores)
         
         logger.info(f"Parámetros: {params}")
         logger.info(f"Anomalías detectadas: {n_anomalias} ({porcentaje_anomalias:.2f}%)")
-        logger.info(f"Media de puntuaciones: {media_scores:.4f}")
+        logger.info(f"Separación scores (P95-P50): {separacion_scores:.4f}")
+        logger.info(f"Std scores: {std_scores:.4f}")
         
-        # Calcular métricas de clustering si es posible
-        metricas_clustering = calcular_metricas_clustering(X_escalado, etiquetas, logger)
-        
-        return (media_scores, params, clf, *metricas_clustering)
+        return (separacion_scores, params, clf)
         
     except Exception as e:
         logger.error(f"Error evaluando parámetros {params}: {e}")
         return None
 
 
-def calcular_metricas_clustering(X: np.ndarray, etiquetas: np.ndarray, logger: logging.Logger) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-    """
-    Calcula métricas de clustering cuando es posible.
-    
-    Args:
-        X: Datos para calcular métricas
-        etiquetas: Etiquetas de clasificación
-        logger: Logger para registrar información
-        
-    Returns:
-        Tupla con silhouette, calinski-harabasz y davies-bouldin scores
-    """
-    if len(np.unique(etiquetas)) > 1:
-        try:
-            silhouette = silhouette_score(X, etiquetas)
-            calinski = calinski_harabasz_score(X, etiquetas)
-            davies = davies_bouldin_score(X, etiquetas)
-            
-            logger.info(f"Silhouette Score: {silhouette:.4f}")
-            logger.info(f"Calinski-Harabasz Score: {calinski:.4f}")
-            logger.info(f"Davies-Bouldin Score: {davies:.4f}")
-            
-            return silhouette, calinski, davies
-        except Exception as e:
-            logger.warning(f"Error calculando métricas de clustering: {e}")
-    else:
-        logger.info("No es posible calcular métricas de clustering con una sola clase")
-    
-    return None, None, None
+
 
 
 def buscar_mejores_parametros(X_escalado: np.ndarray, logger: logging.Logger, param_grid: Dict = None) -> Tuple:
@@ -323,16 +334,17 @@ def buscar_mejores_parametros(X_escalado: np.ndarray, logger: logging.Logger, pa
     if not resultados_validos:
         raise ValueError("No se encontraron parámetros que produzcan resultados válidos")
     
-    # Seleccionar el mejor resultado
+    # Seleccionar el mejor resultado por separación de scores (mayor es mejor)
     mejor_resultado = max(resultados_validos, key=lambda x: x[0])
     logger.info(f"Mejores parámetros encontrados: {mejor_resultado[1]}")
+    logger.info(f"Mejor separación de scores: {mejor_resultado[0]:.4f}")
     
     return mejor_resultado
 
 
 def guardar_metricas(ruta_archivo: Path, mejor_resultado: Tuple, n_anomalias: int, porcentaje_anomalias: float) -> None:
     """
-    Guarda las métricas del modelo en un archivo de texto.
+    Guarda las métricas del modelo en un archivo de texto (100% no-supervisado).
     
     Args:
         ruta_archivo: Ruta donde guardar las métricas
@@ -340,20 +352,13 @@ def guardar_metricas(ruta_archivo: Path, mejor_resultado: Tuple, n_anomalias: in
         n_anomalias: Número de anomalías detectadas
         porcentaje_anomalias: Porcentaje de anomalías
     """
-    _, mejores_params, _, silhouette, calinski, davies = mejor_resultado
+    separacion_scores, mejores_params, _ = mejor_resultado
     
     with open(ruta_archivo, 'w', encoding='utf-8') as f:
         f.write(f"Mejores parámetros: {mejores_params}\n")
         f.write(f"Número de anomalías detectadas: {n_anomalias}\n")
         f.write(f"Porcentaje de anomalías detectadas: {porcentaje_anomalias:.4f}%\n")
-        f.write(f"Media de puntuaciones de anomalía: {mejor_resultado[0]:.4f}\n")
-        
-        if silhouette is not None:
-            f.write(f"Silhouette Score: {silhouette:.4f}\n")
-        if calinski is not None:
-            f.write(f"Calinski-Harabasz Score: {calinski:.4f}\n")
-        if davies is not None:
-            f.write(f"Davies-Bouldin Score: {davies:.4f}\n")
+        f.write(f"Separación de scores (P95-P50): {separacion_scores:.4f}\n")
 
 
 def guardar_modelo(modelo: IsolationForest, scores: np.ndarray, etiquetas: np.ndarray, 
@@ -430,7 +435,7 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
 def guardar_anomalias(datos_originales: pd.DataFrame, etiquetas: np.ndarray, 
                      scores: np.ndarray, ruta_archivo: Path) -> None:
     """
-    Guarda las anomalías detectadas en un archivo CSV.
+    Guarda las anomalías detectadas en un archivo CSV (salida estandarizada).
     
     Args:
         datos_originales: Datos originales
@@ -438,11 +443,57 @@ def guardar_anomalias(datos_originales: pd.DataFrame, etiquetas: np.ndarray,
         scores: Puntuaciones de anomalía
         ruta_archivo: Ruta donde guardar el archivo
     """
-    anomalias = datos_originales[etiquetas == 1].copy()
-    anomalias['anomaly_score'] = scores[etiquetas == 1]  # Estandarizado: anomaly_score
-    anomalias['is_outlier'] = 1  # Estandarizado: is_outlier
-    anomalias = anomalias.sort_values('anomaly_score', ascending=False)  # Mayor score = más anómalo
+    # Crear DataFrame con todos los datos y scores estandarizados
+    datos_salida = datos_originales.copy()
+    datos_salida['anomaly_score'] = scores
+    datos_salida['is_outlier'] = etiquetas
+    
+    # Guardar salida completa con fecha, XYZ, is_outlier y anomaly_score
+    ruta_salida_completa = ruta_archivo.parent / 'anomaly_scores.csv'
+    datos_salida[['fecha'] + CARACTERISTICAS_BASE + ['is_outlier', 'anomaly_score']].to_csv(ruta_salida_completa, index=False)
+    
+    # Guardar solo anomalías para retrocompatibilidad
+    anomalias = datos_salida[etiquetas == 1].copy()
+    
+    # Ordenar por fecha si está disponible, sino por score
+    if 'fecha' in anomalias.columns:
+        anomalias = anomalias.sort_values(['fecha', 'anomaly_score'], ascending=[True, False])
+    else:
+        anomalias = anomalias.sort_values('anomaly_score', ascending=False)  # Mayor score = más anómalo
+    
     anomalias.to_csv(ruta_archivo, index=False)
+
+
+def guardar_metricas_csv(datos: pd.DataFrame, etiquetas: np.ndarray, scores: np.ndarray, 
+                        mejor_resultado: Tuple, ruta_archivo: Path) -> None:
+    """
+    Guarda métricas estandarizadas en formato CSV para comparación entre algoritmos (100% no-supervisado).
+    
+    Args:
+        datos: DataFrame con datos originales
+        etiquetas: Etiquetas binarias de anomalías
+        scores: Scores de anomalía
+        mejor_resultado: Tupla con resultados del mejor modelo
+        ruta_archivo: Ruta donde guardar el CSV
+    """
+    separacion_scores, mejores_params, _ = mejor_resultado
+    
+    # Métricas básicas (100% no-supervisado)
+    metricas = {
+        'algoritmo': 'Isolation_Forest',
+        'params_json': str(mejores_params),
+        'n_clusters': None,  # No aplica para Isolation Forest
+        'silhouette_score': None,  # No válido para detección binaria
+        'calinski_harabasz_score': None,
+        'davies_bouldin_score': None,
+        'pct_anomalias': np.mean(etiquetas) * 100,
+        'p95_minus_p50': separacion_scores,
+        'mean_score': np.mean(scores)
+    }
+    
+    # Guardar como CSV
+    df_metricas = pd.DataFrame([metricas])
+    df_metricas.to_csv(ruta_archivo, index=False)
 
 
 def main() -> None:
@@ -481,7 +532,7 @@ def main() -> None:
         mejor_resultado = buscar_mejores_parametros(X_para_optimizacion, logger)
         
         # Aplicar el mejor modelo al dataset completo
-        _, mejores_params, _, _, _, _ = mejor_resultado
+        _, mejores_params, _ = mejor_resultado
         logger.info(f"Aplicando mejores parámetros al dataset completo...")
         
         modelo_final = IsolationForest(
@@ -513,7 +564,13 @@ def main() -> None:
         ruta_modelo_pkl = directorios.directorio_modelos / EXTENSION_MODELO_PKL
         ruta_modelo_h5 = directorios.directorio_modelos / EXTENSION_MODELO_H5
         guardar_modelo(modelo_final, scores_pred, etiquetas_pred, ruta_modelo_pkl, ruta_modelo_h5)
+        
+        # Guardar escalador para inferencia futura
+        ruta_escalador = directorios.directorio_modelos / 'scaler.pkl'
+        joblib.dump(escalador, ruta_escalador)
+        
         logger.info(f"Modelo guardado en formatos pickle y HDF5")
+        logger.info(f"Escalador guardado en {ruta_escalador}")
         
         # Generar gráficos
         generar_graficos(scores_pred, X_pca, etiquetas_pred, directorios.directorio_graficas)
@@ -523,6 +580,11 @@ def main() -> None:
         ruta_anomalias = directorios.directorio_metricas / ARCHIVO_ANOMALIAS
         guardar_anomalias(datos, etiquetas_pred, scores_pred, ruta_anomalias)
         logger.info(f"Anomalías guardadas en {ruta_anomalias}")
+        
+        # Guardar métricas estandarizadas CSV
+        ruta_metricas_csv = directorios.directorio_metricas / 'metrics.csv'
+        guardar_metricas_csv(datos, etiquetas_pred, scores_pred, mejor_resultado, ruta_metricas_csv)
+        logger.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         
         logger.info("Proceso completado exitosamente")
         

@@ -28,10 +28,12 @@ Este módulo implementa el algoritmo **K-Means** para clustering de datos de ace
 - ✅ **Outputs estandarizados** compatibles con sistema de comparación
 
 ### 🛠️ Correcciones Implementadas
+- **🔒 Carga 100% No-Supervisada**: Implementado patrón blindado con `usecols=['acceleration_x','acceleration_y','acceleration_z','fecha']`
 - **🔴 Bug Crítico Corregido**: Ahora usa `kmeans_final.labels_` en lugar de labels del dataset reducido
 - **📊 Métricas Recalculadas**: Métricas finales calculadas en el dataset completo
-- **📝 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier`, `cluster_id`
+- **📝 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier`, `cluster_id` con fecha incluida
 - **📈 CSV de Métricas**: Archivo `metrics.csv` para comparación entre algoritmos
+- **🛡️ Sin Dependencias Supervisadas**: Eliminadas todas las referencias a etiquetas externas
 
 ## 📊 Datos de Entrada
 
@@ -40,13 +42,15 @@ Este módulo implementa el algoritmo **K-Means** para clustering de datos de ace
 - **Ubicación**: Misma carpeta que el script
 - **Formato**: CSV con headers
 
-### 📝 Columnas Requeridas
+### 📝 Columnas Requeridas (100% No-Supervisado)
 ```csv
-acceleration_x,acceleration_y,acceleration_z
-1.2,0.8,9.8
-1.1,0.9,9.9
-1.3,0.7,9.7
+fecha,acceleration_x,acceleration_y,acceleration_z
+2024-01-15 10:30:00,1.2,0.8,9.8
+2024-01-15 10:30:01,1.1,0.9,9.9
+2024-01-15 10:30:02,1.3,0.7,9.7
 ```
+
+⚠️ **Importante**: El script **solo carga estas 4 columnas** usando `usecols`. Cualquier otra columna en el CSV (como 'severity', 'label', etc.) será **ignorada completamente**, garantizando operación 100% no-supervisada.
 
 ### 🧮 Características Generadas
 El código automáticamente calcula:
@@ -141,11 +145,13 @@ modelos_entrenados_KMeans/
 
 ### 📄 scores_kmeans.csv (Principal)
 ```csv
-acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
-1.2,0.8,9.8,9.85,0.234,0,2
-1.1,0.9,9.9,9.92,0.189,0,2
-2.5,1.5,8.2,8.59,1.456,0,1
+fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
+2024-01-15 10:30:00,1.2,0.8,9.8,9.85,0.234,0,2
+2024-01-15 10:30:01,1.1,0.9,9.9,9.92,0.189,0,2
+2024-01-15 10:30:02,2.5,1.5,8.2,8.59,1.456,0,1
 ```
+
+🔒 **Garantía No-Supervisada**: Este archivo contiene **solo** datos de sensores (XYZ) + fecha + scores calculados + cluster asignado. No hay referencias a etiquetas supervisadas.
 
 ### 📊 metrics.csv (Para Comparación)
 ```csv

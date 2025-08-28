@@ -32,7 +32,8 @@ N_JOBS = 2  # Optimizado para Google Colab (limitación de memoria)
 PCA_COMPONENTS_2D = 2
 PCA_COMPONENTS_3D = 3
 
-# Configuración de características
+# Configuración de características (100% no-supervisado)
+USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 CARACTERISTICA_MAGNITUD = 'magnitud_aceleracion'
 
@@ -82,50 +83,60 @@ class KMeansAnalyzer:
         logger.addHandler(console_handler)
     
     def cargar_datos(self, ruta_datos: str) -> None:
-        """Cargar y preprocesar los datos"""
+        """Cargar y preprocesar los datos (100% no-supervisado)"""
         try:
             # Verificar que el archivo existe
             if not os.path.exists(ruta_datos):
                 raise FileNotFoundError(f"El archivo no existe en la ruta: {ruta_datos}")
             
-            # Cargar datos con manejo de encoding
+            # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
             try:
-                self.datos = pd.read_csv(ruta_datos, encoding='utf-8')
+                self.datos = pd.read_csv(
+                    ruta_datos, 
+                    usecols=USECOLS, 
+                    parse_dates=['fecha'], 
+                    dayfirst=True,
+                    dtype={
+                        'acceleration_x': 'float32',
+                        'acceleration_y': 'float32', 
+                        'acceleration_z': 'float32'
+                    },
+                    encoding='utf-8'
+                )
             except UnicodeDecodeError:
-                self.datos = pd.read_csv(ruta_datos, encoding='latin-1')
+                self.datos = pd.read_csv(
+                    ruta_datos, 
+                    usecols=USECOLS, 
+                    parse_dates=['fecha'], 
+                    dayfirst=True,
+                    dtype={
+                        'acceleration_x': 'float32',
+                        'acceleration_y': 'float32', 
+                        'acceleration_z': 'float32'
+                    },
+                    encoding='latin-1'
+                )
                 logging.info("Archivo cargado con encoding latin-1")
+            
+            # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
+            self.datos = self.datos[['fecha'] + CARACTERISTICAS_BASE].copy()
+            
+            # Ordenar por fecha (recomendable)
+            self.datos.sort_values('fecha', inplace=True)
             
             logging.info(f"Datos cargados correctamente desde: {ruta_datos}")
             logging.info(f"Forma del dataset: {self.datos.shape}")
-            logging.info(f"Columnas disponibles: {list(self.datos.columns)}")
+            logging.info(f"Columnas cargadas: {list(self.datos.columns)}")
             
             # Mostrar primeras filas para verificación
             logging.info("Primeras 3 filas del dataset:")
             for i, row in self.datos.head(3).iterrows():
                 logging.info(f"  Fila {i}: {dict(row)}")
             
-            # Verificar columnas requeridas
-            columnas_requeridas = CARACTERISTICAS_BASE
-            columnas_disponibles = list(self.datos.columns)
-            columnas_faltantes = [col for col in columnas_requeridas if col not in columnas_disponibles]
-            
-            if columnas_faltantes:
-                logging.error(f"Columnas requeridas: {columnas_requeridas}")
-                logging.error(f"Columnas disponibles: {columnas_disponibles}")
-                raise ValueError(f"Columnas faltantes en los datos: {columnas_faltantes}")
-            
-            logging.info("✓ Todas las columnas requeridas están presentes")
-            
             # Verificar tipos de datos
             logging.info("Tipos de datos por columna:")
-            for col in CARACTERISTICAS_BASE:
-                tipo = self.datos[col].dtype
-                logging.info(f"  {col}: {tipo}")
-                
-                # Verificar si hay valores no numéricos
-                if not pd.api.types.is_numeric_dtype(self.datos[col]):
-                    logging.warning(f"⚠️  La columna '{col}' no es numérica. Intentando conversión...")
-                    self.datos[col] = pd.to_numeric(self.datos[col], errors='coerce')
+            for col in self.datos.columns:
+                logging.info(f"  {col}: {self.datos[col].dtype}")
             
             # Manejo de valores faltantes
             filas_originales = len(self.datos)
@@ -344,6 +355,8 @@ class KMeansAnalyzer:
         self.datos['cluster_id'] = self.labels  # ID del cluster asignado
         logging.info("Puntuación de anomalías calculada para cada punto de datos.")
     
+
+    
     def guardar_resultados(self) -> None:
         """Guardar todos los resultados del análisis"""
         # Guardar métricas
@@ -355,28 +368,33 @@ class KMeansAnalyzer:
             f.write(f"Davies-Bouldin Score: {self.metricas_finales['davies_bouldin']:.4f}\n")
             f.write(f"Inercia (SSE): {self.metricas_finales['inertia']:.2f}\n")
         
-        # Guardar puntuaciones de anomalías con nombres estandarizados
-        ruta_scores = os.path.join(self.directorio_metricas, 'scores_kmeans.csv')
-        self.datos.to_csv(ruta_scores, index=False)
+        # Guardar puntuaciones de anomalías con fecha, XYZ y scores (estandarizado)
+        ruta_scores = os.path.join(self.directorio_metricas, 'anomaly_scores.csv')
+        datos_salida = self.datos[['fecha'] + CARACTERISTICAS_BASE + ['anomaly_score', 'cluster_id']].copy()
+        datos_salida.to_csv(ruta_scores, index=False)
         
-        # Guardar métricas en CSV estándar
+        # Guardar métricas en CSV estándar (100% no-supervisado)
         ruta_metricas_csv = os.path.join(self.directorio_metricas, 'metrics.csv')
         metricas_df = pd.DataFrame([{
             'algoritmo': 'K-Means',
-            'k_clusters': self.metricas_finales['k_optimo'],
+            'params_json': f'{{"k_clusters": {self.metricas_finales["k_optimo"]}}}',
+            'n_clusters': self.metricas_finales['k_optimo'],
             'silhouette_score': self.metricas_finales['silhouette'],
             'calinski_harabasz_score': self.metricas_finales['calinski_harabasz'],
             'davies_bouldin_score': self.metricas_finales['davies_bouldin'],
-            'inertia': self.metricas_finales['inertia'],
-            'n_anomalias': 0,  # K-Means no detecta anomalías binarias
-            'porcentaje_anomalias': 0.0,
-            'media_anomaly_score': np.mean(self.datos['anomaly_score'])
+            'pct_anomalias': 0.0,  # K-Means no detecta anomalías binarias
+            'p95_minus_p50': np.percentile(self.datos['anomaly_score'], 95) - np.percentile(self.datos['anomaly_score'], 50),
+            'mean_score': np.mean(self.datos['anomaly_score'])
         }])
         metricas_df.to_csv(ruta_metricas_csv, index=False)
         
         # Guardar modelo como pickle
         ruta_modelo_pkl = os.path.join(self.directorio_modelos, 'kmeans_model.pkl')
         joblib.dump(self.kmeans_final, ruta_modelo_pkl)
+        
+        # Guardar escalador para inferencia futura
+        ruta_escalador = os.path.join(self.directorio_modelos, 'scaler.pkl')
+        joblib.dump(self.escalador, ruta_escalador)
         
         # Guardar modelo como h5
         ruta_modelo_h5 = os.path.join(self.directorio_modelos, 'kmeans_model.h5')
@@ -388,6 +406,7 @@ class KMeansAnalyzer:
         logging.info(f"Scores guardados en {ruta_scores}")
         logging.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         logging.info(f"Modelo guardado como pickle en {ruta_modelo_pkl}")
+        logging.info(f"Escalador guardado en {ruta_escalador}")
         logging.info(f"Modelo guardado como h5 en {ruta_modelo_h5}")
     
     def crear_visualizaciones(self) -> None:
@@ -401,7 +420,7 @@ class KMeansAnalyzer:
         X_pca_3d = pca_3d.fit_transform(self.X_escalado)
         
         # Distancias para anomalías
-        distancias = self.datos['puntuacion_anomalia'].values
+        distancias = self.datos['anomaly_score'].values
         
         # Crear visualizaciones
         self._crear_visualizacion_2d_clusters(X_pca_2d)

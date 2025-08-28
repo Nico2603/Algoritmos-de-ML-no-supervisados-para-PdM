@@ -89,27 +89,31 @@ class ComparadorAlgoritmos:
         """Carga los resultados de todos los algoritmos."""
         logging.info("Cargando resultados de todos los algoritmos...")
         
-        # Mapeo de algoritmos a directorios
+        # Mapeo de algoritmos a directorios (actualizado post-correcciones)
         algoritmos_config = {
             'K-Means': {
                 'directorio': '1. Clustering/K-means',
                 'archivo_scores': 'metricas_KMeans/scores_kmeans.csv',
-                'archivo_metricas': 'metricas_KMeans/metrics.csv'
+                'archivo_metricas': 'metricas_KMeans/metrics.csv',
+                'columnas_esperadas': ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion', 'anomaly_score', 'cluster_id']
             },
             'DBSCAN': {
                 'directorio': '1. Clustering/DBSCAN',
                 'archivo_scores': 'metricas_DBSCAN/scores_dbscan.csv',
-                'archivo_metricas': 'metricas_DBSCAN/metrics.txt'  # Texto hasta que se estandarice
+                'archivo_metricas': 'metricas_DBSCAN/metrics.txt',
+                'columnas_esperadas': ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion', 'anomaly_score', 'is_outlier', 'cluster_id']
             },
             'Isolation Forest': {
                 'directorio': '2. Detección de Anomalías/Isolation Forest',
                 'archivo_scores': 'metricas_IForest/anomalies.csv',
-                'archivo_metricas': 'metricas_IForest/metrics.txt'
+                'archivo_metricas': 'metricas_IForest/metrics.txt',
+                'columnas_esperadas': ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion', 'anomaly_score', 'is_outlier']
             },
             'CBLOF': {
                 'directorio': '2. Detección de Anomalías/CBLOF (Cluster-Based Local Outlier Factor)',
                 'archivo_scores': 'metricas_CBLOF/anomalies.csv',
-                'archivo_metricas': 'metricas_CBLOF/metrics.txt'
+                'archivo_metricas': 'metricas_CBLOF/metrics.txt',
+                'columnas_esperadas': ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion', 'anomaly_score', 'is_outlier']
             }
         }
         
@@ -117,8 +121,24 @@ class ComparadorAlgoritmos:
             try:
                 ruta_scores = self.directorio_proyecto / config['directorio'] / config['archivo_scores']
                 if ruta_scores.exists():
-                    self.resultados[algoritmo] = pd.read_csv(ruta_scores)
-                    logging.info(f"✓ {algoritmo}: {len(self.resultados[algoritmo])} registros cargados")
+                    datos = pd.read_csv(ruta_scores)
+                    
+                    # Validar que tiene las columnas esperadas post-correcciones
+                    columnas_encontradas = set(datos.columns)
+                    columnas_criticas = {'acceleration_x', 'acceleration_y', 'acceleration_z', 'anomaly_score'}
+                    
+                    if not columnas_criticas.issubset(columnas_encontradas):
+                        logging.warning(f"⚠️  {algoritmo}: Faltan columnas críticas. Encontradas: {list(columnas_encontradas)}")
+                    
+                    # Verificar que es 100% no-supervisado (no debe tener 'severity' o similares)
+                    columnas_prohibidas = {'severity', 'label', 'ground_truth'}
+                    encontradas_prohibidas = columnas_prohibidas.intersection(columnas_encontradas)
+                    if encontradas_prohibidas:
+                        logging.warning(f"⚠️  {algoritmo}: Contiene columnas supervisadas: {encontradas_prohibidas}")
+                    
+                    self.resultados[algoritmo] = datos
+                    logging.info(f"✓ {algoritmo}: {len(datos)} registros cargados")
+                    logging.info(f"   Columnas: {list(datos.columns)}")
                 else:
                     logging.warning(f"⚠️  {algoritmo}: No se encontró {ruta_scores}")
             except Exception as e:

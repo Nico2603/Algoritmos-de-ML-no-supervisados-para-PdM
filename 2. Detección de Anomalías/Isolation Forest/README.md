@@ -34,10 +34,12 @@ Este módulo implementa el algoritmo **Isolation Forest** para detección de ano
 - ✅ **Scores de anomalía calibrados** correctamente orientados
 
 ### 🛠️ Correcciones Implementadas
+- **🔒 Carga 100% No-Supervisada**: Implementado patrón blindado con `usecols=['acceleration_x','acceleration_y','acceleration_z','fecha']`
 - **🔴 Score Invertido Corregido**: Ahora usa `-decision_function()` (mayor = más anómalo)
-- **📊 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier`
+- **📊 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier` con fecha incluida
 - **📈 Orientación Consistente**: Score unificado compatible con sistema de comparación
 - **🎯 Mejores Parámetros**: Búsqueda optimizada de hiperparámetros
+- **🛡️ Sin Dependencias Supervisadas**: Eliminadas todas las referencias a etiquetas externas
 
 ## 📊 Datos de Entrada
 
@@ -46,13 +48,15 @@ Este módulo implementa el algoritmo **Isolation Forest** para detección de ano
 - **Ubicación**: Misma carpeta que el script
 - **Formato**: CSV con headers
 
-### 📝 Columnas Requeridas
+### 📝 Columnas Requeridas (100% No-Supervisado)
 ```csv
-acceleration_x,acceleration_y,acceleration_z
-1.2,0.8,9.8
-1.1,0.9,9.9
-2.5,1.5,8.2
+fecha,acceleration_x,acceleration_y,acceleration_z
+2024-01-15 10:30:00,1.2,0.8,9.8
+2024-01-15 10:30:01,1.1,0.9,9.9
+2024-01-15 10:30:02,2.5,1.5,8.2
 ```
+
+⚠️ **Importante**: El script **solo carga estas 4 columnas** usando `usecols`. Cualquier otra columna en el CSV (como 'severity', 'label', etc.) será **ignorada completamente**, garantizando operación 100% no-supervisada.
 
 ### 🧮 Características Generadas
 El código automáticamente calcula:
@@ -157,11 +161,13 @@ modelos_entrenados_IForest/
 
 ### 🚨 anomalies.csv (Principal)
 ```csv
-acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier
-2.5,1.5,8.2,8.59,0.856,1
-3.1,2.2,7.8,8.94,0.723,1
-1.8,1.9,8.9,9.32,0.645,1
+fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier
+2024-01-15 10:30:00,2.5,1.5,8.2,8.59,0.856,1
+2024-01-15 11:45:30,3.1,2.2,7.8,8.94,0.723,1
+2024-01-15 14:20:15,1.8,1.9,8.9,9.32,0.645,1
 ```
+
+🔒 **Garantía No-Supervisada**: Este archivo contiene **solo** datos de sensores (XYZ) + fecha + scores calculados. No hay referencias a etiquetas supervisadas.
 
 ### 📊 metrics.txt (Resultados)
 ```

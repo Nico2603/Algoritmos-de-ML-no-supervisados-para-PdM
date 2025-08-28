@@ -30,21 +30,52 @@ Este proyecto implementa un sistema completo de Machine Learning no supervisado 
 
 ### ❌ Problemas Encontrados y ✅ Soluciones
 
-#### 1. **K-Means - Bug Crítico**
+#### 1. **Carga de Datos 100% No-Supervisada** ✅
+- **Problema**: Scripts cargaban todas las columnas del CSV, incluyendo potenciales etiquetas supervisadas
+- **Solución**: Implementar patrón blindado de carga con `usecols=['acceleration_x','acceleration_y','acceleration_z','fecha']`
+- **Beneficio**: Garantiza que ningún algoritmo pueda acceder accidentalmente a información supervisada
+
+#### 2. **K-Means - Bug Crítico** ✅
 - **Problema**: Usaba labels del dataset reducido con el dataset completo
 - **Solución**: Usar `kmeans_final.labels_` y recalcular métricas en dataset completo
 
-#### 2. **Isolation Forest - Score Invertido**  
+#### 3. **Isolation Forest - Score Invertido** ✅  
 - **Problema**: `decision_function()` devuelve valores más negativos para anomalías
 - **Solución**: Usar `-decision_function()` para score consistente (mayor = más anómalo)
 
-#### 3. **CBLOF - Métricas Erróneas**
+#### 4. **CBLOF - Métricas Erróneas** ✅
 - **Problema**: Calculaba "distancias intra-cluster" usando labels binarios (0/1)
 - **Solución**: Reconocer que `labels_` en PyOD es clasificación, no cluster IDs
 
-#### 4. **DBSCAN - Score Faltante**
+#### 5. **DBSCAN - Score Faltante** ✅
 - **Problema**: No tenía score numérico para comparación
 - **Solución**: Implementar score basado en distancia a puntos núcleo
+
+#### 6. **Eliminación de Dependencias Supervisadas** ✅
+- **Problema**: Algunos scripts contenían referencias a columnas como 'severity'
+- **Solución**: Eliminar completamente métricas supervisadas y referencias a etiquetas externas
+
+## 📊 Patrón de Carga 100% No-Supervisada
+
+### 🔒 Carga Blindada Implementada
+```python
+# Patrón común aplicado en los 4 scripts
+USECOLS = ['acceleration_x','acceleration_y','acceleration_z','fecha']
+df = pd.read_csv(ruta, usecols=USECOLS, parse_dates=['fecha'], dayfirst=True, dtype={
+    'acceleration_x':'float32','acceleration_y':'float32','acceleration_z':'float32'
+})
+df = df[['fecha','acceleration_x','acceleration_y','acceleration_z']].copy()
+df.sort_values('fecha', inplace=True)  # opcional pero recomendable
+
+# Features numéricas para el modelo
+X = df[['acceleration_x','acceleration_y','acceleration_z']].values
+```
+
+### 🛡️ Garantías Implementadas
+- **Solo 4 columnas**: acceleration_x, acceleration_y, acceleration_z, fecha
+- **Fecha excluida del modelo**: Solo para ordenar/particionar/exportar
+- **Tipos ligeros**: float32 para eficiencia de memoria
+- **Sin referencias externas**: Ningún algoritmo puede usar datos supervisados
 
 ## 📊 Sistema de Score de Severidad Unificado
 
@@ -210,24 +241,30 @@ python analisis_estabilidad_bootstrap.py
 python generador_informe_final.py
 ```
 
-## 📊 Outputs Estandarizados
+## 📊 Outputs Estandarizados (Post-Correcciones)
 
 ### 📄 Archivos CSV Comunes
-Todos los algoritmos ahora generan:
+Todos los algoritmos ahora generan (100% no-supervisado):
 
 ```csv
-# scores_[algoritmo].csv
-acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
-1.2,0.8,9.8,9.85,0.75,0,2
+# scores_[algoritmo].csv - Incluye fecha para análisis temporal
+fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
+2024-01-15 10:30:00,1.2,0.8,9.8,9.85,0.75,0,2
 
-# anomalies.csv (solo anomalías detectadas)
-acceleration_x,acceleration_y,acceleration_z,anomaly_score,is_outlier
-1.5,1.2,8.5,0.95,1
+# anomalies.csv (solo anomalías detectadas) 
+fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier
+2024-01-15 11:45:00,1.5,1.2,8.5,8.95,0.95,1
 
 # metrics.csv (métricas estandarizadas)
-algoritmo,silhouette_score,n_anomalias,porcentaje_anomalias,media_anomaly_score
-K-Means,0.7234,0,0.0,0.3456
+algoritmo,params_json,n_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,pct_anomalias,p95_minus_p50,mean_score
+K-Means,"{\"k_clusters\": 3}",3,0.7234,1456.78,0.892,0.0,0.234,0.345
 ```
+
+### 🔒 Características Garantizadas
+- **Solo datos de sensores**: acceleration_x, acceleration_y, acceleration_z
+- **Fecha preservada**: Para análisis temporal pero excluida del modelo
+- **Sin etiquetas supervisadas**: Eliminadas referencias a 'severity', 'label', etc.
+- **Scores consistentes**: Mayor valor = mayor anomalía en todos los algoritmos
 
 ## 🎯 Recomendaciones Operativas
 

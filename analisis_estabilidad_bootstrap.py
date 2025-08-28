@@ -31,7 +31,9 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Constantes
+# Constantes (100% no-supervisado)
+USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
+CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 N_BOOTSTRAP = 50  # Número de muestras bootstrap (reducido para eficiencia)
 RANDOM_STATE = 42
 SAMPLE_FRACTION = 0.8  # Fracción de datos para cada bootstrap
@@ -111,8 +113,24 @@ class AnalizadorEstabilidad:
         logging.info(f"Cargando datos desde: {ruta_datos}")
         
         try:
-            self.datos_originales = pd.read_csv(ruta_datos)
-            logging.info(f"Datos cargados: {len(self.datos_originales)} registros")
+            # Carga 100% no-supervisada con patrón estándar
+            self.datos_originales = pd.read_csv(
+                ruta_datos, 
+                usecols=USECOLS, 
+                parse_dates=['fecha'], 
+                dayfirst=True, 
+                dtype={
+                    'acceleration_x': 'float32',
+                    'acceleration_y': 'float32', 
+                    'acceleration_z': 'float32'
+                }
+            )
+            # Asegurar orden de columnas y que solo tengamos las 4 requeridas
+            self.datos_originales = self.datos_originales[['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']].copy()
+            self.datos_originales.sort_values('fecha', inplace=True)
+            
+            logging.info(f"Datos cargados (100% no-supervisado): {len(self.datos_originales)} registros")
+            logging.info(f"Columnas: {list(self.datos_originales.columns)}")
             
             # Preprocesar datos
             self._preprocesar_datos()
@@ -122,17 +140,16 @@ class AnalizadorEstabilidad:
             raise
     
     def _preprocesar_datos(self) -> None:
-        """Preprocesa los datos para análisis."""
+        """Preprocesa los datos para análisis (100% no-supervisado)."""
         # Eliminar valores faltantes
         datos_limpios = self.datos_originales.dropna()
         
-        # Verificar características base
-        caracteristicas_base = ['acceleration_x', 'acceleration_y', 'acceleration_z']
-        for col in caracteristicas_base:
+        # Verificar características base (ya sabemos que están por la carga con usecols)
+        for col in CARACTERISTICAS_BASE:
             if col not in datos_limpios.columns:
                 raise ValueError(f"Característica requerida no encontrada: {col}")
         
-        # Crear característica de magnitud
+        # Crear característica de magnitud (opcional, sigue siendo no-supervisado)
         datos_limpios = datos_limpios.copy()
         datos_limpios['magnitud_aceleracion'] = np.sqrt(
             datos_limpios['acceleration_x']**2 +
@@ -140,15 +157,16 @@ class AnalizadorEstabilidad:
             datos_limpios['acceleration_z']**2
         )
         
-        # Seleccionar características
-        caracteristicas = caracteristicas_base + ['magnitud_aceleracion']
-        X = datos_limpios[caracteristicas].values
+        # Solo usar XYZ y magnitud para el modelo (fecha solo para ordenar/exportar)
+        caracteristicas_modelo = CARACTERISTICAS_BASE + ['magnitud_aceleracion']
+        X = datos_limpios[caracteristicas_modelo].values
         
         # Escalar datos
         self.escalador = StandardScaler()
         self.X_escalado = self.escalador.fit_transform(X)
         
-        logging.info(f"Datos preprocesados: {self.X_escalado.shape}")
+        logging.info(f"Datos preprocesados (100% no-supervisado): {self.X_escalado.shape}")
+        logging.info(f"Características usadas: {caracteristicas_modelo}")
     
     def generar_muestra_bootstrap(self, indice_bootstrap: int) -> Tuple[np.ndarray, np.ndarray]:
         """

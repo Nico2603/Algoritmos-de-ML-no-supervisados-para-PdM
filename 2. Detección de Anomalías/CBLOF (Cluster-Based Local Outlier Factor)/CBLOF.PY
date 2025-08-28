@@ -34,6 +34,8 @@ ARCHIVO_ANOMALIAS = 'anomalies.csv'
 ARCHIVO_MODELO_PKL = 'cblof_model.pkl'
 ARCHIVO_MODELO_H5 = 'cblof_model.h5'
 
+# Configuración (100% no-supervisado)
+USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 CARACTERISTICA_MAGNITUD = 'magnitud_aceleracion'
 
@@ -100,7 +102,7 @@ def crear_directorios(directorio_base: Path) -> Tuple[Path, Path, Path]:
 
 def cargar_y_validar_datos(ruta_datos: Path) -> pd.DataFrame:
     """
-    Carga y valida los datos desde el archivo CSV.
+    Carga y valida los datos desde el archivo CSV (100% no-supervisado).
     
     Args:
         ruta_datos: Ruta al archivo de datos
@@ -116,32 +118,45 @@ def cargar_y_validar_datos(ruta_datos: Path) -> pd.DataFrame:
         raise FileNotFoundError(f"El archivo de datos no existe: {ruta_datos}")
     
     try:
-        # Intentar diferentes encodings comunes
-        encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-        datos = None
+        # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
+        try:
+            datos = pd.read_csv(
+                ruta_datos, 
+                usecols=USECOLS, 
+                parse_dates=['fecha'], 
+                dayfirst=True,
+                dtype={
+                    'acceleration_x': 'float32',
+                    'acceleration_y': 'float32', 
+                    'acceleration_z': 'float32'
+                },
+                encoding='utf-8'
+            )
+            logging.info("Datos cargados correctamente con encoding: utf-8")
+        except UnicodeDecodeError:
+            datos = pd.read_csv(
+                ruta_datos, 
+                usecols=USECOLS, 
+                parse_dates=['fecha'], 
+                dayfirst=True,
+                dtype={
+                    'acceleration_x': 'float32',
+                    'acceleration_y': 'float32', 
+                    'acceleration_z': 'float32'
+                },
+                encoding='latin-1'
+            )
+            logging.info("Datos cargados correctamente con encoding: latin-1")
         
-        for encoding in encodings:
-            try:
-                datos = pd.read_csv(ruta_datos, encoding=encoding)
-                logging.info(f"Datos cargados correctamente con encoding: {encoding}")
-                break
-            except UnicodeDecodeError:
-                continue
+        # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
+        datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
         
-        if datos is None:
-            raise ValueError("No se pudo leer el archivo CSV con ningún encoding estándar")
+        # Ordenar por fecha (recomendable)
+        datos.sort_values('fecha', inplace=True)
         
         # Mostrar muestra de los primeros datos
         logging.info(f"Muestra de los datos (primeras 3 filas):")
         logging.info(f"{datos.head(3).to_string()}")
-        
-        # Validar columnas requeridas
-        columnas_requeridas = CARACTERISTICAS_BASE
-        columnas_faltantes = [col for col in columnas_requeridas if col not in datos.columns]
-        
-        if columnas_faltantes:
-            logging.error(f"Columnas disponibles: {list(datos.columns)}")
-            raise ValueError(f"Columnas faltantes en los datos: {columnas_faltantes}")
         
         # Verificar que hay datos suficientes
         if len(datos) < 100:
@@ -286,24 +301,24 @@ def evaluar_parametros_cblof(params: Dict[str, Any], X_escalado: np.ndarray) -> 
         )
         
         clf.fit(X_escalado)
-        labels = clf.labels_
+        anomaly_scores = clf.decision_scores_
         
-        # Verificar que hay al menos 2 clusters
-        unique_labels = np.unique(labels)
-        if len(unique_labels) <= 1:
-            return None
+        # CORRIGIDO: Usar criterio de separación de scores en lugar de métricas de clustering incorrectas
+        # Calcular separación entre anomalías y normales
+        p95_score = np.percentile(anomaly_scores, 95)
+        p50_score = np.percentile(anomaly_scores, 50)
+        separacion_scores = p95_score - p50_score
         
-        # Calcular métricas
-        silhouette_avg = silhouette_score(X_escalado, labels)
-        calinski_harabasz = calinski_harabasz_score(X_escalado, labels)
-        davies_bouldin = davies_bouldin_score(X_escalado, labels)
+        # Métricas adicionales
+        std_scores = np.std(anomaly_scores)
+        mean_scores = np.mean(anomaly_scores)
         
         logging.info(f"Parámetros: {params}")
-        logging.info(f"Silhouette Score: {silhouette_avg:.4f}")
-        logging.info(f"Calinski-Harabasz Score: {calinski_harabasz:.4f}")
-        logging.info(f"Davies-Bouldin Score: {davies_bouldin:.4f}")
+        logging.info(f"Separación scores (P95-P50): {separacion_scores:.4f}")
+        logging.info(f"Std scores: {std_scores:.4f}")
+        logging.info(f"Mean scores: {mean_scores:.4f}")
         
-        return (silhouette_avg, calinski_harabasz, davies_bouldin, params, clf)
+        return (separacion_scores, std_scores, mean_scores, params, clf)
         
     except Exception as e:
         logging.warning(f"Error evaluando parámetros {params}: {e}")
@@ -337,20 +352,20 @@ def buscar_mejores_parametros(X_escalado: np.ndarray) -> Tuple[CBLOF, Dict[str, 
     if not resultados_validos:
         raise ValueError("No se encontraron parámetros que produzcan clusters válidos")
     
-    # Seleccionar el mejor modelo
+    # Seleccionar el mejor modelo por separación de scores (mayor es mejor)
     mejor_resultado = max(resultados_validos, key=lambda x: x[0])
-    mejor_score, mejor_calinski, mejor_davies, mejores_parametros, mejor_modelo = mejor_resultado
+    mejor_separacion, mejor_std, mejor_mean, mejores_parametros, mejor_modelo = mejor_resultado
     
     metricas = {
-        'silhouette_score': mejor_score,
-        'calinski_harabasz_score': mejor_calinski,
-        'davies_bouldin_score': mejor_davies
+        'separacion_scores': mejor_separacion,
+        'std_scores': mejor_std,
+        'mean_scores': mejor_mean
     }
     
     logging.info(f"\nMejores parámetros encontrados: {mejores_parametros}")
-    logging.info(f"Mejor Silhouette Score: {mejor_score:.4f}")
-    logging.info(f"Mejor Calinski-Harabasz Score: {mejor_calinski:.4f}")
-    logging.info(f"Mejor Davies-Bouldin Score: {mejor_davies:.4f}")
+    logging.info(f"Mejor separación de scores (P95-P50): {mejor_separacion:.4f}")
+    logging.info(f"Std de scores: {mejor_std:.4f}")
+    logging.info(f"Mean de scores: {mejor_mean:.4f}")
     
     return mejor_modelo, metricas
 
@@ -408,10 +423,10 @@ def guardar_metricas(metricas: Dict[str, Any], metricas_adicionales: Dict[str, A
         f.write("=== MÉTRICAS DEL MODELO CBLOF ===\n\n")
         f.write(f"Mejores parámetros: {mejores_parametros}\n\n")
         
-        f.write("Métricas de clustering:\n")
-        f.write(f"Silhouette Score: {metricas['silhouette_score']:.4f}\n")
-        f.write(f"Calinski-Harabasz Score: {metricas['calinski_harabasz_score']:.4f}\n")
-        f.write(f"Davies-Bouldin Score: {metricas['davies_bouldin_score']:.4f}\n\n")
+        f.write("Métricas de optimización:\n")
+        f.write(f"Separación de scores (P95-P50): {metricas['separacion_scores']:.4f}\n")
+        f.write(f"Desviación estándar de scores: {metricas['std_scores']:.4f}\n")
+        f.write(f"Media de scores: {metricas['mean_scores']:.4f}\n\n")
         
         f.write("Métricas de anomalías:\n")
         f.write(f"Número de anomalías detectadas: {metricas_adicionales['n_anomalias']}\n")
@@ -524,7 +539,7 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
 def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame, 
                                 directorio_metricas: Path) -> None:
     """
-    Guarda las anomalías detectadas en un archivo CSV.
+    Guarda las anomalías detectadas en un archivo CSV (salida estandarizada).
     
     Args:
         modelo: Modelo CBLOF entrenado
@@ -532,14 +547,25 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
         directorio_metricas: Directorio donde guardar el archivo
     """
     try:
-        # En PyOD, labels_ ya es 0/1 (normal/outlier)
-        anomalias = datos[modelo.labels_ == 1].copy()
+        # Crear DataFrame con todos los datos y scores estandarizados
+        datos_salida = datos.copy()
+        datos_salida['anomaly_score'] = modelo.decision_scores_
+        datos_salida['is_outlier'] = modelo.labels_  # En PyOD: 0=normal, 1=outlier
+        
+        # Guardar salida completa con fecha, XYZ, is_outlier y anomaly_score
+        ruta_salida_completa = directorio_metricas / 'anomaly_scores.csv'
+        datos_salida[['fecha'] + CARACTERISTICAS_BASE + ['is_outlier', 'anomaly_score']].to_csv(ruta_salida_completa, index=False)
+        logging.info(f"Salida completa guardada en {ruta_salida_completa}")
+        
+        # Guardar solo anomalías para retrocompatibilidad
+        anomalias = datos_salida[modelo.labels_ == 1].copy()
         
         if not anomalias.empty:
-            # Estandarizar nombres de columnas
-            anomalias['anomaly_score'] = modelo.decision_scores_[modelo.labels_ == 1]
-            anomalias['is_outlier'] = 1
-            anomalias = anomalias.sort_values('anomaly_score', ascending=False)
+            # Ordenar por fecha si está disponible, sino por score
+            if 'fecha' in anomalias.columns:
+                anomalias = anomalias.sort_values(['fecha', 'anomaly_score'], ascending=[True, False])
+            else:
+                anomalias = anomalias.sort_values('anomaly_score', ascending=False)
             
             ruta_anomalias_csv = directorio_metricas / ARCHIVO_ANOMALIAS
             anomalias.to_csv(ruta_anomalias_csv, index=False)
@@ -605,17 +631,67 @@ def main() -> None:
         guardar_metricas(metricas, metricas_adicionales, mejores_parametros, directorio_metricas)
         guardar_modelo(mejor_modelo, directorio_modelos)
         
+        # Guardar escalador y PCA para inferencia futura
+        ruta_escalador = directorio_modelos / 'scaler.pkl'
+        joblib.dump(escalador, ruta_escalador)
+        
+        ruta_pca = directorio_modelos / 'pca.pkl'
+        joblib.dump(pca, ruta_pca)
+        
+        logging.info(f"Escalador guardado en {ruta_escalador}")
+        logging.info(f"PCA guardado en {ruta_pca}")
+        
         # 10. Generar visualizaciones
         generar_visualizaciones(mejor_modelo, X_pca, datos_limpios, directorio_graficas)
         
         # 11. Guardar anomalías detectadas
         guardar_anomalias_detectadas(mejor_modelo, datos_limpios, directorio_metricas)
         
+        # 12. Guardar métricas estandarizadas CSV
+        ruta_metricas_csv = directorio_metricas / 'metrics.csv'
+        guardar_metricas_csv(mejor_modelo, datos_limpios, mejores_parametros, metricas, ruta_metricas_csv)
+        logging.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
+        
         logging.info("=== PROCESO COMPLETADO EXITOSAMENTE ===")
         
     except Exception as e:
         logging.error(f"Error en el proceso principal: {e}")
         raise
+
+
+def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros: Dict[str, Any], 
+                        metricas: Dict[str, float], ruta_archivo: Path) -> None:
+    """
+    Guarda métricas estandarizadas en formato CSV para comparación entre algoritmos.
+    
+    Args:
+        modelo: Modelo CBLOF entrenado
+        datos: DataFrame con datos originales
+        mejores_parametros: Parámetros del mejor modelo
+        metricas: Métricas del modelo
+        ruta_archivo: Ruta donde guardar el CSV
+    """
+    # Métricas básicas
+    anomaly_scores = modelo.decision_scores_
+    etiquetas_binarias = modelo.labels_
+    
+    metricas_csv = {
+        'algoritmo': 'CBLOF',
+        'params_json': str(mejores_parametros),
+        'n_clusters': mejores_parametros.get('n_clusters', None),
+        'silhouette_score': None,  # No válido para detección binaria
+        'calinski_harabasz_score': None,
+        'davies_bouldin_score': None,
+        'pct_anomalias': np.mean(etiquetas_binarias) * 100,
+        'p95_minus_p50': metricas.get('separacion_scores', 0),
+        'mean_score': np.mean(anomaly_scores)
+    }
+    
+
+    
+    # Guardar como CSV
+    df_metricas = pd.DataFrame([metricas_csv])
+    df_metricas.to_csv(ruta_archivo, index=False)
 
 
 if __name__ == "__main__":

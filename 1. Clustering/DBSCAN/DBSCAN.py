@@ -26,7 +26,8 @@ from typing import Dict, List, Optional, Tuple, Any
 warnings.filterwarnings('ignore')
 plt.style.use('default')
 
-# Constantes
+# Constantes (100% no-supervisado)
+USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 MIN_CLUSTERS_VALIDOS = 2
 N_JOBS_PARALELO = 1  # Reducido a 1 para evitar problemas de memoria
@@ -83,7 +84,7 @@ class ProcesadorDatos:
     @staticmethod
     def cargar_datos(ruta_archivo: str) -> pd.DataFrame:
         """
-        Carga los datos desde un archivo CSV.
+        Carga los datos desde un archivo CSV (100% no-supervisado).
         
         Args:
             ruta_archivo: Ruta al archivo CSV.
@@ -99,14 +100,47 @@ class ProcesadorDatos:
             raise FileNotFoundError(f"El archivo {ruta_archivo} no existe")
         
         try:
-            datos = pd.read_csv(ruta_archivo)
+            # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
+            try:
+                datos = pd.read_csv(
+                    ruta_archivo, 
+                    usecols=USECOLS, 
+                    parse_dates=['fecha'], 
+                    dayfirst=True,
+                    dtype={
+                        'acceleration_x': 'float32',
+                        'acceleration_y': 'float32', 
+                        'acceleration_z': 'float32'
+                    }
+                )
+            except UnicodeDecodeError:
+                datos = pd.read_csv(
+                    ruta_archivo, 
+                    usecols=USECOLS, 
+                    parse_dates=['fecha'], 
+                    dayfirst=True,
+                    dtype={
+                        'acceleration_x': 'float32',
+                        'acceleration_y': 'float32', 
+                        'acceleration_z': 'float32'
+                    },
+                    encoding='latin-1'
+                )
+                logging.info("Archivo cargado con encoding latin-1")
+            
             if datos.empty:
                 raise ValueError("El archivo CSV está vacío")
+            
+            # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
+            datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
+            
+            # Ordenar por fecha (recomendable)
+            datos.sort_values('fecha', inplace=True)
             
             # Mostrar información detallada sobre los datos cargados
             logging.info(f"Archivo CSV cargado exitosamente:")
             logging.info(f"  - Dimensiones: {datos.shape[0]} filas x {datos.shape[1]} columnas")
-            logging.info(f"  - Columnas encontradas: {list(datos.columns)}")
+            logging.info(f"  - Columnas cargadas: {list(datos.columns)}")
             logging.info(f"  - Tipos de datos por columna:")
             for col in datos.columns:
                 logging.info(f"    • {col}: {datos[col].dtype}")
@@ -117,7 +151,7 @@ class ProcesadorDatos:
                 logging.info(f"    Fila {i+1}: {dict(fila)}")
             
             # Verificar valores faltantes por columna
-            valores_faltantes = datos.isnull().sum()
+            valores_faltantes = datos[CARACTERISTICAS_BASE].isnull().sum()
             if valores_faltantes.any():
                 logging.info(f"  - Valores faltantes por columna:")
                 for col, faltantes in valores_faltantes.items():
@@ -600,10 +634,18 @@ class DetectorAnomalias:
         scores = np.zeros(len(etiquetas))
         
         if hasattr(modelo, 'core_sample_indices_') and len(modelo.core_sample_indices_) > 0:
-            # Calcular distancias a puntos núcleo para todos los puntos
+            # OPTIMIZACIÓN CRÍTICA: Usar NearestNeighbors en lugar de pairwise_distances
+            # para evitar colapso de memoria con 500k puntos
+            from sklearn.neighbors import NearestNeighbors
             indices_nucleo = modelo.core_sample_indices_
-            distancias_a_nucleo = pairwise_distances(X_escalado, X_escalado[indices_nucleo])
-            distancias_minimas = np.min(distancias_a_nucleo, axis=1)
+            
+            # Crear modelo de vecinos más cercanos con puntos núcleo
+            nn_model = NearestNeighbors(n_neighbors=1, metric='euclidean')
+            nn_model.fit(X_escalado[indices_nucleo])
+            
+            # Calcular distancia mínima a punto núcleo más cercano
+            distancias_minimas, _ = nn_model.kneighbors(X_escalado)
+            distancias_minimas = distancias_minimas.flatten()
             
             # Para puntos de ruido: distancia mínima a núcleos (alta = más anómalo)
             # Para puntos núcleo: distancia = 0 (menos anómalo)
@@ -648,6 +690,34 @@ class DetectorAnomalias:
             datos_con_scores.to_csv(ruta_scores, index=False)
             logging.info(f"Scores de todos los puntos guardados en: {ruta_scores}")
             
+            # Guardar métricas estandarizadas en CSV para comparación (100% no-supervisado)
+            ruta_metricas_csv = os.path.join(directorio_metricas, 'metrics.csv')
+            metricas_df = pd.DataFrame([{
+                'algoritmo': 'DBSCAN',
+                'params_json': f'{{"eps": {modelo.eps}, "min_samples": {modelo.min_samples}}}',
+                'n_clusters': len(set(etiquetas)) - (1 if -1 in etiquetas else 0),
+                'silhouette_score': None,  # Se calculará si hay clusters válidos
+                'calinski_harabasz_score': None,
+                'davies_bouldin_score': None,
+                'pct_anomalias': np.mean(etiquetas == -1) * 100,
+                'p95_minus_p50': np.percentile(anomaly_scores, 95) - np.percentile(anomaly_scores, 50),
+                'mean_score': np.mean(anomaly_scores)
+            }])
+            
+            # Calcular métricas de clustering si hay clusters válidos
+            mascara_sin_ruido = etiquetas != -1
+            if np.sum(mascara_sin_ruido) >= 10 and len(set(etiquetas[mascara_sin_ruido])) >= 2:
+                from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+                X_sin_ruido = X_escalado[mascara_sin_ruido]
+                etiquetas_sin_ruido = etiquetas[mascara_sin_ruido]
+                
+                metricas_df.loc[0, 'silhouette_score'] = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+                metricas_df.loc[0, 'calinski_harabasz_score'] = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
+                metricas_df.loc[0, 'davies_bouldin_score'] = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
+            
+            metricas_df.to_csv(ruta_metricas_csv, index=False)
+            logging.info(f"Métricas CSV guardadas en: {ruta_metricas_csv}")
+                    
             # Identificar anomalías (ruido)
             anomalias = datos_con_scores[etiquetas == -1].copy()
             
@@ -667,6 +737,8 @@ class DetectorAnomalias:
             
         except Exception as e:
             logging.error(f"Error identificando anomalías: {str(e)}")
+
+
     
 
 
@@ -752,6 +824,11 @@ def main():
         # Guardar modelos
         ruta_modelo_pkl = os.path.join(gestor_directorios.directorio_modelos, 'dbscan_model.pkl')
         GuardadorModelos.guardar_modelo_pkl(modelo_final, ruta_modelo_pkl)
+        
+        # Guardar escalador para inferencia futura
+        ruta_escalador = os.path.join(gestor_directorios.directorio_modelos, 'scaler.pkl')
+        joblib.dump(escalador, ruta_escalador)
+        logging.info(f"Escalador guardado en {ruta_escalador}")
         
         ruta_modelo_h5 = os.path.join(gestor_directorios.directorio_modelos, 'dbscan_model.h5')
         GuardadorModelos.guardar_modelo_h5(modelo_final, ruta_modelo_h5)
