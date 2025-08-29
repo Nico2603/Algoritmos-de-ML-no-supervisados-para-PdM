@@ -1,0 +1,42 @@
+=== INICIANDO PROCESO DE DETECCIÓN DE ANOMALÍAS CON CBLOF ===
+Datos cargados correctamente con encoding: utf-8
+Muestra de los datos (primeras 3 filas):
+                fecha  acceleration_x  acceleration_y  acceleration_z
+0 2025-01-01 00:00:00        2.102561       10.213203       -2.059213
+1 2025-01-01 00:00:05        2.102633       12.161409       -2.219768
+2 2025-01-01 00:00:10        0.340328        9.105401        0.730459
+Muestra de valores en acceleration_x: [2.102560520172119, 2.102633237838745, 0.3403279185295105, -2.045274257659912, 1.0052828788757324]
+Muestra de valores en acceleration_y: [10.213203430175781, 12.161409378051758, 9.105401039123535, 12.966036796569824, 10.304435729980469]
+Muestra de valores en acceleration_z: [-2.059213161468506, -2.2197675704956055, 0.7304587364196777, 1.7956664562225342, 0.9400092363357544]
+Datos cargados: 518400 filas, 4 columnas
+Columnas disponibles: ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']
+Característica 'magnitud_aceleracion' añadida.
+Estadísticas de los datos:
+  acceleration_x: min=-4.1820, max=3.9978, media=-0.0947
+  acceleration_y: min=5.2126, max=14.0532, media=9.6342
+  acceleration_z: min=-3.7873, max=2.5047, media=-0.6398
+  magnitud_aceleracion: min=5.2286, max=15.1160, media=10.1243
+Datos escalados correctamente.
+Datos preprocesados: 518400 muestras, 4 características
+PCA aplicado. Varianza explicada: 0.9970
+Dataset reducido para optimización: 518400 -> 50000 muestras
+Iniciando búsqueda de mejores parámetros...
+
+Mejores parámetros encontrados: {'alpha': 0.7, 'beta': 5, 'n_clusters': 5, 'use_weights': True}
+Mejor separación de scores (P95-P50): 9592.4232
+Std de scores: 5027.2778
+Mean de scores: 13181.1665
+Aplicando mejores parámetros al dataset completo...
+Anomalías detectadas: 51840 (10.00%)
+Rango de scores de anomalía: 6132.4426 - 299330.1725
+Métricas guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.txt
+Modelo guardado como pickle en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\modelos_entrenados_CBLOF\cblof_model.pkl
+Modelo guardado como HDF5 en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\modelos_entrenados_CBLOF\cblof_model.h5
+Escalador guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\modelos_entrenados_CBLOF\scaler.pkl
+PCA guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\modelos_entrenados_CBLOF\pca.pkl
+Gráfico de puntuaciones guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\graficas_CBLOF\anomaly_scores.png
+Gráfico 3D guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\graficas_CBLOF\anomalies_3d.png
+Salida completa guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\anomaly_scores.csv
+Anomalías guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\anomalies.csv
+Métricas CSV guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv
+=== PROCESO COMPLETADO EXITOSAMENTE ===

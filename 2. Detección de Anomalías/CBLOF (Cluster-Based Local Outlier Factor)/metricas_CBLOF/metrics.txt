@@ -1,0 +1,18 @@
+=== MÉTRICAS DEL MODELO CBLOF ===
+
+Mejores parámetros: {'n_clusters': 5, 'alpha': 0.7, 'beta': 5, 'use_weights': True}
+
+Métricas de optimización:
+Separación de scores (P95-P50): 9592.4232
+Desviación estándar de scores: 5027.2778
+Media de scores: 13181.1665
+
+Métricas de anomalías:
+Número de anomalías detectadas: 51840
+Porcentaje de anomalías detectadas: 10.0000%
+Media de puntuaciones de anomalía: 135852.2222
+
+Estadísticas de puntuaciones:
+Score mínimo: 6132.4426
+Score máximo: 299330.1725
+Desviación estándar: 50857.1485

@@ -1,0 +1,7 @@
+2025-08-28 15:58:20,376 - INFO - === INICIANDO ANÁLISIS DE ESTABILIDAD ===
+2025-08-28 15:58:20,377 - INFO - Cargando datos desde: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\data.csv
+2025-08-28 15:58:21,623 - INFO - Datos cargados (100% no-supervisado): 518400 registros
+2025-08-28 15:58:21,623 - INFO - Columnas: ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']
+2025-08-28 15:58:21,662 - INFO - Datos preprocesados (100% no-supervisado): (518400, 4)
+2025-08-28 15:58:21,662 - INFO - Características usadas: ['acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion']
+2025-08-28 15:58:21,664 - INFO - Evaluando estabilidad de K-Means...

@@ -1,0 +1,5 @@
+2025-08-28 15:20:13,047 - INFO - Verificando archivos de datos...
+2025-08-28 15:20:13,054 - INFO - === EJECUTANDO ALGORITMOS DE ML ===
+2025-08-28 15:20:13,054 - INFO - 
+--- Ejecutando K-Means ---
+2025-08-28 15:20:13,054 - INFO - Ejecutando: cd C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means && python "K-means.py"
