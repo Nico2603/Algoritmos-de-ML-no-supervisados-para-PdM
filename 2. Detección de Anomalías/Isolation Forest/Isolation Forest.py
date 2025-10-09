@@ -43,13 +43,16 @@ ARCHIVO_ANOMALIAS = 'anomalies.csv'
 COMPONENTES_PCA = 3
 RANDOM_STATE = 42
 
-# Parámetros por defecto para búsqueda de hiperparámetros (optimizado para Google Colab)
+# Parámetros por defecto para búsqueda de hiperparámetros (optimizado para velocidad)
 PARAMETROS_BUSQUEDA = {
-    'n_estimators': [100, 150],
-    'max_samples': ['auto', 0.8],
+    'n_estimators': [50, 100],  # Reducido para velocidad
+    'max_samples': ['auto'],    # Solo auto para simplicidad
     'contamination': [0.05, 0.1],
     'max_features': [1.0]
 }
+# Optimización de muestreo
+MAX_MUESTRAS_OPTIMIZACION = 10000  # Reducido significativamente para velocidad
+MAX_MUESTRAS_VISUALIZATION = 8000  # Muestreo para visualización
 
 
 class DirectoriosProyecto:
@@ -206,7 +209,7 @@ def escalar_datos(X: np.ndarray) -> Tuple[np.ndarray, StandardScaler]:
     return X_escalado, escalador
 
 
-def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = 50000) -> Tuple[np.ndarray, np.ndarray]:
+def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = MAX_MUESTRAS_OPTIMIZACION) -> Tuple[np.ndarray, np.ndarray]:
     """
     Reduce el tamaño de la muestra para optimización de parámetros si es muy grande.
     
@@ -229,6 +232,32 @@ def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = 50000) 
     
     print(f"Dataset reducido para optimización: {len(X)} -> {len(X_reducido)} muestras")
     return X_reducido, indices_seleccionados
+
+
+def reducir_muestra_para_visualizacion(X: np.ndarray, etiquetas: np.ndarray, max_muestras: int = MAX_MUESTRAS_VISUALIZATION) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Reduce el tamaño de la muestra para visualización si es muy grande.
+    
+    Args:
+        X: Matriz de características completa.
+        etiquetas: Etiquetas correspondientes.
+        max_muestras: Número máximo de muestras para visualización.
+        
+    Returns:
+        Tupla con (muestra_reducida, etiquetas_reducidas).
+    """
+    if len(X) <= max_muestras:
+        return X, etiquetas
+    
+    np.random.seed(RANDOM_STATE)
+    indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
+    indices_seleccionados = np.sort(indices_seleccionados)
+    
+    X_reducido = X[indices_seleccionados]
+    etiquetas_reducidas = etiquetas[indices_seleccionados]
+    
+    print(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
+    return X_reducido, etiquetas_reducidas
 
 
 def reducir_dimensionalidad(X: np.ndarray, n_componentes: int = COMPONENTES_PCA) -> Tuple[np.ndarray, PCA]:
@@ -322,8 +351,8 @@ def buscar_mejores_parametros(X_escalado: np.ndarray, logger: logging.Logger, pa
     
     logger.info("Iniciando búsqueda de mejores parámetros...")
     
-    # Evaluar parámetros en paralelo (limitado para Google Colab)
-    resultados = Parallel(n_jobs=2)(
+    # Evaluar parámetros en paralelo (limitado para estabilidad)
+    resultados = Parallel(n_jobs=1)(
         delayed(evaluar_modelo_isolation_forest)(params, X_escalado, logger) 
         for params in ParameterGrid(param_grid)
     )
@@ -423,24 +452,51 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     plt.savefig(ruta_puntuaciones, dpi=300, bbox_inches='tight')
     plt.close()
     
-    # Gráfico 3D de anomalías
-    X_anomalias = X_pca[etiquetas == 1]
-    X_normales = X_pca[etiquetas == 0]
+    # Gráfico 3D de anomalías - OPTIMIZADO
+    # Aplicar muestreo para visualización si es necesario
+    X_vis, etiquetas_vis = reducir_muestra_para_visualizacion(X_pca, etiquetas)
+    
+    X_anomalias = X_vis[etiquetas_vis == 1]
+    X_normales = X_vis[etiquetas_vis == 0]
     
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(111, projection='3d')
     
     # Plotear puntos normales y anomalías
-    ax.scatter(X_normales[:, 0], X_normales[:, 1], X_normales[:, 2], 
-              c='blue', label='Normales', s=20, alpha=0.6)
-    ax.scatter(X_anomalias[:, 0], X_anomalias[:, 1], X_anomalias[:, 2], 
-              c='red', label='Anomalías', s=30, alpha=0.8)
+    if len(X_normales) > 0:
+        ax.scatter(X_normales[:, 0], X_normales[:, 1], X_normales[:, 2], 
+                  c='blue', label=f'Normales ({len(X_normales)})', s=15, alpha=0.6)
     
-    ax.set_xlabel('Componente Principal 1')
-    ax.set_ylabel('Componente Principal 2')
-    ax.set_zlabel('Componente Principal 3')
+    if len(X_anomalias) > 0:
+        ax.scatter(X_anomalias[:, 0], X_anomalias[:, 1], X_anomalias[:, 2], 
+                  c='red', label=f'Anomalías ({len(X_anomalias)})', s=20, alpha=0.8)
+    
+    ax.set_xlabel('Componente Principal 1', fontsize=12)
+    ax.set_ylabel('Componente Principal 2', fontsize=12)
+    ax.set_zlabel('Componente Principal 3', fontsize=12)
     ax.set_title('Detección de Anomalías con Isolation Forest (3D)', fontsize=14)
-    ax.legend()
+    
+    # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
+    if len(X_vis) > 0:
+        # Calcular rangos de datos
+        x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+        y_range = np.ptp(X_vis[:, 1])
+        z_range = np.ptp(X_vis[:, 2])
+        max_range = max(x_range, y_range, z_range)
+        
+        # Centrar y escalar los ejes
+        x_center = np.mean(X_vis[:, 0])
+        y_center = np.mean(X_vis[:, 1])
+        z_center = np.mean(X_vis[:, 2])
+        
+        ax.set_xlim(x_center - max_range/2, x_center + max_range/2)
+        ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
+        ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
+        
+        # Configurar aspecto igual
+        ax.set_box_aspect([1,1,1])
+    
+    ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
     
     ruta_anomalias_3d = directorio_graficas / 'anomalies_3d.png'
     plt.savefig(ruta_anomalias_3d, dpi=300, bbox_inches='tight')

@@ -26,13 +26,15 @@ from typing import Dict, List, Optional, Tuple, Any
 warnings.filterwarnings('ignore')
 plt.style.use('default')
 
-# Constantes (100% no-supervisado)
+# Constantes optimizadas (100% no-supervisado)
 USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 MIN_CLUSTERS_VALIDOS = 2
-N_JOBS_PARALELO = 1  # Reducido a 1 para evitar problemas de memoria
+N_JOBS_PARALELO = 1  # Secuencial para evitar problemas de memoria
 FORMATO_METRICAS = '.4f'
-MAX_MUESTRAS_OPTIMIZACION = 10000  # Reducido para optimización de memoria
+MAX_MUESTRAS_OPTIMIZACION = 8000   # Reducido aún más para velocidad
+MAX_MUESTRAS_VISUALIZATION = 8000  # Muestreo para visualización
+SCATTER_SIZE = 15  # Reducido para mejor rendimiento visual
 
 class ConfiguradorLogging:
     """Configurador del sistema de logging."""
@@ -279,6 +281,32 @@ class ProcesadorDatos:
         
         logging.info(f"Dataset reducido para optimización: {len(X)} -> {len(X_reducido)} muestras")
         return X_reducido, indices_seleccionados
+    
+    @staticmethod
+    def reducir_muestra_para_visualizacion(X: np.ndarray, etiquetas: np.ndarray, max_muestras: int = MAX_MUESTRAS_VISUALIZATION) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Reduce el tamaño de la muestra para visualización si es muy grande.
+        
+        Args:
+            X: Matriz de características completa.
+            etiquetas: Etiquetas de clusters.
+            max_muestras: Número máximo de muestras para visualización.
+            
+        Returns:
+            Tupla con (muestra_reducida, etiquetas_reducidas).
+        """
+        if len(X) <= max_muestras:
+            return X, etiquetas
+        
+        np.random.seed(42)
+        indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
+        indices_seleccionados = np.sort(indices_seleccionados)
+        
+        X_reducido = X[indices_seleccionados]
+        etiquetas_reducidas = etiquetas[indices_seleccionados]
+        
+        logging.info(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
+        return X_reducido, etiquetas_reducidas
 
 class AnalizadorDistancias:
     """Analizador de distancias para estimar parámetros de DBSCAN."""
@@ -318,8 +346,8 @@ class OptimizadorDBSCAN:
     """Optimizador de parámetros para DBSCAN."""
     
     @staticmethod
-    def generar_grilla_parametros(eps_min: float = 0.1, eps_max: float = 2.0, 
-                                 n_eps: int = 8, min_samples_min: int = 3, 
+    def generar_grilla_parametros(eps_min: float = 0.2, eps_max: float = 1.5, 
+                                 n_eps: int = 4, min_samples_min: int = 3, 
                                  min_samples_max: int = 4) -> List[Dict[str, Any]]:
         """
         Genera la grilla de parámetros para la búsqueda.
@@ -459,7 +487,7 @@ class VisualizadorClusters:
     def visualizar_clusters_2d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
                               directorio_graficas: str, titulo: str = "Clustering DBSCAN (2D)") -> None:
         """
-        Visualiza clusters en 2D usando PCA.
+        Visualiza clusters en 2D usando PCA - OPTIMIZADA.
         
         Args:
             X_escalado: Datos escalados.
@@ -471,22 +499,25 @@ class VisualizadorClusters:
             pca = PCA(n_components=2)
             X_pca = pca.fit_transform(X_escalado)
             
-            etiquetas_unicas = set(etiquetas)
+            # Aplicar muestreo para visualización si es necesario
+            X_vis, etiquetas_vis = ProcesadorDatos.reducir_muestra_para_visualizacion(X_pca, etiquetas)
+            
+            etiquetas_unicas = set(etiquetas_vis)
             colores = plt.cm.Spectral(np.linspace(0, 1, len(etiquetas_unicas)))
             
             plt.figure(figsize=(12, 8))
             for etiqueta, color in zip(etiquetas_unicas, colores):
-                mascara = etiquetas == etiqueta
-                puntos = X_pca[mascara]
+                mascara = etiquetas_vis == etiqueta
+                puntos = X_vis[mascara]
                 
                 if etiqueta == -1:
                     plt.scatter(puntos[:, 0], puntos[:, 1], c='black', marker='x', 
-                              s=50, alpha=0.7, label='Ruido')
+                              s=SCATTER_SIZE + 15, alpha=0.7, label='Ruido')
                 else:
                     plt.scatter(puntos[:, 0], puntos[:, 1], c=[color], marker='o', 
-                              s=30, alpha=0.7, label=f'Cluster {etiqueta}')
+                              s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            plt.title(titulo)
+            plt.title(titulo, fontsize=14)
             plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
             plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -504,7 +535,7 @@ class VisualizadorClusters:
     def visualizar_clusters_3d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
                               directorio_graficas: str, titulo: str = "Clustering DBSCAN (3D)") -> None:
         """
-        Visualiza clusters en 3D usando PCA.
+        Visualiza clusters en 3D usando PCA - OPTIMIZADA.
         
         Args:
             X_escalado: Datos escalados.
@@ -516,28 +547,51 @@ class VisualizadorClusters:
             pca_3d = PCA(n_components=3)
             X_pca_3d = pca_3d.fit_transform(X_escalado)
             
-            etiquetas_unicas = set(etiquetas)
+            # Aplicar muestreo para visualización si es necesario
+            X_vis, etiquetas_vis = ProcesadorDatos.reducir_muestra_para_visualizacion(X_pca_3d, etiquetas)
+            
+            etiquetas_unicas = set(etiquetas_vis)
             colores = plt.cm.Spectral(np.linspace(0, 1, len(etiquetas_unicas)))
             
             fig = plt.figure(figsize=(12, 9))
             ax = fig.add_subplot(111, projection='3d')
             
             for etiqueta, color in zip(etiquetas_unicas, colores):
-                mascara = etiquetas == etiqueta
-                puntos = X_pca_3d[mascara]
+                mascara = etiquetas_vis == etiqueta
+                puntos = X_vis[mascara]
                 
                 if etiqueta == -1:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
-                             c='black', marker='x', s=50, alpha=0.7, label='Ruido')
+                             c='black', marker='x', s=SCATTER_SIZE + 15, alpha=0.7, label='Ruido')
                 else:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
-                             c=[color], marker='o', s=30, alpha=0.7, label=f'Cluster {etiqueta}')
+                             c=[color], marker='o', s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            ax.set_title(titulo)
+            ax.set_title(titulo, fontsize=14)
             ax.set_xlabel(f'PC1 (Var: {pca_3d.explained_variance_ratio_[0]:.2%})')
             ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
             ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
-            ax.legend()
+            
+            # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
+            # Calcular rangos de datos
+            x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+            y_range = np.ptp(X_vis[:, 1])
+            z_range = np.ptp(X_vis[:, 2])
+            max_range = max(x_range, y_range, z_range)
+            
+            # Centrar y escalar los ejes
+            x_center = np.mean(X_vis[:, 0])
+            y_center = np.mean(X_vis[:, 1])
+            z_center = np.mean(X_vis[:, 2])
+            
+            ax.set_xlim(x_center - max_range/2, x_center + max_range/2)
+            ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
+            ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
+            
+            # Configurar aspecto igual
+            ax.set_box_aspect([1,1,1])
+            
+            ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
             
             ruta_grafica = os.path.join(directorio_graficas, 'clusters_3d_pca.png')
             plt.savefig(ruta_grafica, dpi=300, bbox_inches='tight')

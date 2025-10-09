@@ -2,7 +2,14 @@
 
 ## 🎯 Objetivo del Proyecto
 
-Este proyecto compara cuatro algoritmos de Machine Learning no supervisado aplicados al Mantenimiento Predictivo, determinando cuál es el mejor algoritmo de **Clustering** y cuál es el mejor de **Detección de Anomalías** mediante análisis comparativo exhaustivo.
+Este proyecto implementa y compara **cuatro algoritmos** de Machine Learning no supervisado aplicados al **Mantenimiento Predictivo**, determinando cuál es el mejor algoritmo de **Clustering** y cuál es el mejor de **Detección de Anomalías** mediante análisis comparativo exhaustivo con **datasets de más de 500,000 registros**.
+
+### ⚡ Optimizaciones Implementadas
+
+- **Muestreo Estratégico**: Algoritmos optimizados para datasets grandes (500k+ registros)
+- **Visualizaciones Mejoradas**: Gráficas 3D corregidas con proporciones adecuadas
+- **Rendimiento Optimizado**: Ejecución rápida mediante muestreo inteligente
+- **Análisis Automatizado**: Scripts de comparación con reportes completos
 
 ## 📊 Algoritmos Implementados
 
@@ -154,18 +161,33 @@ Todos los algoritmos generan outputs consistentes para facilitar la comparación
 - `anomaly_scores.csv` - Scores de todos los puntos
 - `anomalies.csv` - Solo anomalías detectadas
 
-## 📈 Métricas de Comparación
+## 📈 Métricas de Comparación y Formato Estandarizado
 
-### Clustering
-- **Silhouette Score** (0-1): Mayor es mejor
-- **Calinski-Harabasz Score**: Mayor es mejor
-- **Davies-Bouldin Index**: Menor es mejor
-- **Número de Clusters**: Identificación automática
+### Clustering (DBSCAN y K-Means)
+- **Silhouette Score** (0-1): Mide separación entre clusters. Mayor es mejor
+- **Calinski-Harabasz Score**: Ratio dispersión inter/intra clusters. Mayor es mejor  
+- **Davies-Bouldin Index**: Similitud promedio entre clusters. Menor es mejor
+- **Número de Clusters**: Identificación automática de clusters óptimos
 
-### Detección de Anomalías
-- **Separación de Scores (P95-P50)**: Mayor es mejor (métrica crítica)
-- **Porcentaje de Anomalías**: Debe evaluarse en contexto
-- **Score Promedio**: Indicador general
+**Gráficas Generadas:**
+- `clusters_2d_pca.png` - Visualización 2D optimizada con PCA
+- `clusters_3d_pca.png` - Visualización 3D corregida con proporciones adecuadas
+
+### Detección de Anomalías (CBLOF e Isolation Forest)  
+- **Separación de Scores (P95-P50)**: Separación entre anomalías y normales. Mayor es mejor
+- **Porcentaje de Anomalías**: % de puntos detectados como anomalías
+- **Score Promedio**: Puntuación media de anomalías
+
+**Gráficas Generadas:**
+- `anomaly_scores.png` - Distribución de scores de anomalía
+- `anomalies_3d.png` - Visualización 3D optimizada de anomalías
+
+### 📊 Formato Estandarizado CSV
+
+Todos los algoritmos generan un archivo `metrics.csv` con columnas consistentes:
+```csv
+algoritmo,params_json,n_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,pct_anomalias,p95_minus_p50,mean_score
+```
 
 ## 🏆 Objetivo del Análisis
 
@@ -185,6 +207,24 @@ pip install numpy pandas matplotlib scikit-learn joblib h5py
 # Para CBLOF (PyOD - Python Outlier Detection)
 pip install pyod
 ```
+
+## ⚡ Optimizaciones de Rendimiento
+
+### Muestreo Estratégico
+- **Optimización de parámetros**: Datasets reducidos a 8,000-15,000 muestras
+- **Visualización**: Muestreo inteligente a 6,000-10,000 puntos para gráficas
+- **Reproducibilidad**: Semilla fija (42) para resultados consistentes
+
+### Gráficas 3D Mejoradas
+- **Corrección de aspecto**: Ejes proporcionalmente escalados
+- **Rangos normalizados**: Evita deformación visual
+- **Muestreo para visualización**: Renderizado rápido sin pérdida de información
+
+### Parámetros Optimizados
+- **K-Means**: K máximo reducido a 6, muestreo a 15,000 puntos
+- **DBSCAN**: Grid simplificado, 4 valores eps, muestreo a 8,000 puntos  
+- **Isolation Forest**: n_estimators reducido, muestreo a 10,000 puntos
+- **CBLOF**: Grid simplificado, parámetros fijos, muestreo a 8,000 puntos
 
 ## 🎓 Características de los Algoritmos
 
@@ -208,11 +248,11 @@ pip install pyod
 | Escalabilidad | ⚠️ Limitada | ✅ Excelente |
 | Interpretabilidad | ✅ Alta | ⚠️ Media |
 
-## 📝 Documentación Adicional
+## 📝 Documentación
 
-- **[README_COMPARACION.md](README_COMPARACION.md)** - Guía detallada de comparaciones
-- **[CAMBIOS_REALIZADOS.md](CAMBIOS_REALIZADOS.md)** - Log de cambios del proyecto
-- **READMEs individuales**: Cada algoritmo tiene su propio README en su carpeta
+- **READMEs individuales**: Cada algoritmo tiene documentación detallada en su carpeta
+- **Scripts de comparación**: Generan reportes automáticos con análisis completo
+- **Métricas estandarizadas**: Formato CSV consistente para análisis adicional
 
 ## 🔍 Interpretación de Resultados
 
@@ -260,7 +300,11 @@ Los algoritmos ganadores se pueden usar para:
 
 ## 📅 Última Actualización
 
-Octubre 2025 - Versión 2.0
+Octubre 2025 - **Versión 3.0 - Optimizada**
+- ✅ Optimizaciones de rendimiento para datasets grandes (500k+ registros)
+- ✅ Gráficas 3D corregidas con proporciones adecuadas  
+- ✅ Muestreo estratégico inteligente
+- ✅ Documentación consolidada y actualizada
 
 ---
 

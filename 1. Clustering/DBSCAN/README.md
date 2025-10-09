@@ -1,14 +1,20 @@
-# DBSCAN - Density-Based Spatial Clustering of Applications with Noise
+# DBSCAN - Density-Based Spatial Clustering **OPTIMIZADO**
 
 ## 📋 Descripción
 
-DBSCAN es un algoritmo de clustering basado en densidad que agrupa puntos que están estrechamente empaquetados y marca como outliers los puntos que están solos en regiones de baja densidad.
+DBSCAN es un algoritmo de clustering basado en densidad que agrupa puntos que están estrechamente empaquetados y marca como outliers los puntos que están solos en regiones de baja densidad. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
+
+### ⚡ Optimizaciones Implementadas  
+- 🚀 **Muestreo estratégico**: Reducción inteligente a 8,000 muestras para optimización de parámetros
+- 🎯 **Visualización optimizada**: Muestreo a 8,000 puntos para gráficas rápidas y claras
+- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
+- ⚡ **Grid simplificado**: Búsqueda reducida de parámetros para ejecución rápida
 
 ### Características Principales
-- ✅ Detecta clusters de forma arbitraria (no solo esféricos)
-- ✅ Identifica automáticamente outliers (puntos de ruido)
-- ✅ No requiere especificar el número de clusters a priori
-- ✅ Funciona bien con clusters de densidad variable
+- ✅ **Detecta clusters de forma arbitraria** (no solo esféricos)  
+- ✅ **Identifica automáticamente outliers** (puntos de ruido)
+- ✅ **No requiere especificar** el número de clusters a priori
+- ✅ **Optimizado para datasets grandes** (500k+ registros)
 - ⚠️ Sensible a la elección de parámetros (eps, min_samples)
 
 ## 🎯 Objetivo
@@ -111,19 +117,23 @@ Todos los puntos con:
 ### `anomalies.csv`
 Solo puntos detectados como outliers (is_outlier = 1)
 
-## ⚙️ Configuración Avanzada
+## ⚙️ Configuración Avanzada **OPTIMIZADA**
 
-Para modificar parámetros, edita las constantes en `DBSCAN.py`:
+Parámetros optimizados para ejecución rápida en `DBSCAN.py`:
 
 ```python
-# Rango de búsqueda para eps
-eps_min = 0.1
-eps_max = 2.0
-n_eps = 8
+# Rango de búsqueda para eps (REDUCIDO)
+eps_min = 0.2        # Aumentado de 0.1
+eps_max = 1.5        # Reducido de 2.0  
+n_eps = 4           # Reducido de 8 para velocidad
 
 # Rango de búsqueda para min_samples
 min_samples_min = 3
 min_samples_max = 4
+
+# Muestreo optimizado
+MAX_MUESTRAS_OPTIMIZACION = 8000   # Optimización de parámetros
+MAX_MUESTRAS_VISUALIZATION = 8000  # Visualizaciones
 ```
 
 ## 🔍 Interpretación de Resultados
@@ -178,4 +188,4 @@ Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supe
 ---
 
 **Última actualización**: Octubre 2025  
-**Versión**: 2.0
+**Versión**: 3.0 - **OPTIMIZADA** ⚡

@@ -39,19 +39,23 @@ USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
 CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 CARACTERISTICA_MAGNITUD = 'magnitud_aceleracion'
 
-# Parámetros por defecto
+# Parámetros por defecto optimizados
 PARAMETROS_PCA = {'n_components': 3}
 CONTAMINACION_DEFAULT = 0.1
 RANDOM_STATE = 42
-N_JOBS = 2  # Optimizado para Google Colab (limitación de memoria)
+N_JOBS = 1  # Secuencial para evitar problemas de memoria
 
-# Grid de parámetros para búsqueda (optimizado para Google Colab)
+# Grid de parámetros para búsqueda (optimizado para velocidad)
 PARAM_GRID = {
-    'n_clusters': [5, 10],
-    'alpha': [0.7, 0.9],
-    'beta': [5, 7],
-    'use_weights': [True, False]
+    'n_clusters': [5, 8],      # Reducido para velocidad
+    'alpha': [0.8],            # Solo un valor para simplicidad
+    'beta': [5],               # Solo un valor para simplicidad
+    'use_weights': [True]      # Solo True para simplicidad
 }
+
+# Optimización de muestreo
+MAX_MUESTRAS_OPTIMIZACION = 8000   # Reducido significativamente para velocidad
+MAX_MUESTRAS_VISUALIZATION = 6000  # Muestreo para visualización
 
 
 def configurar_logging(directorio_metricas: Path) -> None:
@@ -254,7 +258,7 @@ def aplicar_pca(X_escalado: np.ndarray) -> Tuple[np.ndarray, PCA]:
     return X_pca, pca
 
 
-def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = 50000) -> Tuple[np.ndarray, np.ndarray]:
+def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = MAX_MUESTRAS_OPTIMIZACION) -> Tuple[np.ndarray, np.ndarray]:
     """
     Reduce el tamaño de la muestra para optimización de parámetros si es muy grande.
     
@@ -277,6 +281,32 @@ def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = 50000) 
     
     logging.info(f"Dataset reducido para optimización: {len(X)} -> {len(X_reducido)} muestras")
     return X_reducido, indices_seleccionados
+
+
+def reducir_muestra_para_visualizacion(X: np.ndarray, etiquetas: np.ndarray, max_muestras: int = MAX_MUESTRAS_VISUALIZATION) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Reduce el tamaño de la muestra para visualización si es muy grande.
+    
+    Args:
+        X: Matriz de características completa.
+        etiquetas: Etiquetas correspondientes.
+        max_muestras: Número máximo de muestras para visualización.
+        
+    Returns:
+        Tupla con (muestra_reducida, etiquetas_reducidas).
+    """
+    if len(X) <= max_muestras:
+        return X, etiquetas
+    
+    np.random.seed(RANDOM_STATE)
+    indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
+    indices_seleccionados = np.sort(indices_seleccionados)
+    
+    X_reducido = X[indices_seleccionados]
+    etiquetas_reducidas = etiquetas[indices_seleccionados]
+    
+    logging.info(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
+    return X_reducido, etiquetas_reducidas
 
 
 def evaluar_parametros_cblof(params: Dict[str, Any], X_escalado: np.ndarray) -> Optional[Tuple]:
@@ -505,18 +535,22 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
     except Exception as e:
         logging.error(f"Error generando gráfico de puntuaciones: {e}")
     
-    # 2. Visualización 3D de clusters y anomalías
+    # 2. Visualización 3D de clusters y anomalías - OPTIMIZADA
     try:
         labels_visualizacion = np.where(modelo.labels_ == 0, 0, 1)
-        X_anomalias = X_pca[labels_visualizacion == 1]
-        X_normales = X_pca[labels_visualizacion == 0]
+        
+        # Aplicar muestreo para visualización si es necesario
+        X_vis, labels_vis = reducir_muestra_para_visualizacion(X_pca, labels_visualizacion)
+        
+        X_anomalias = X_vis[labels_vis == 1]
+        X_normales = X_vis[labels_vis == 0]
         
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, projection='3d')
         
         if len(X_normales) > 0:
             ax.scatter(X_normales[:, 0], X_normales[:, 1], X_normales[:, 2], 
-                      c='blue', label=f'Normales ({len(X_normales)})', s=20, alpha=0.6)
+                      c='blue', label=f'Normales ({len(X_normales)})', s=15, alpha=0.6)
         
         if len(X_anomalias) > 0:
             ax.scatter(X_anomalias[:, 0], X_anomalias[:, 1], X_anomalias[:, 2], 
@@ -526,7 +560,28 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         ax.set_ylabel('Componente Principal 2', fontsize=12)
         ax.set_zlabel('Componente Principal 3', fontsize=12)
         ax.set_title('Detección de Anomalías con CBLOF en 3D', fontsize=14)
-        ax.legend()
+        
+        # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
+        if len(X_vis) > 0:
+            # Calcular rangos de datos
+            x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+            y_range = np.ptp(X_vis[:, 1])
+            z_range = np.ptp(X_vis[:, 2])
+            max_range = max(x_range, y_range, z_range)
+            
+            # Centrar y escalar los ejes
+            x_center = np.mean(X_vis[:, 0])
+            y_center = np.mean(X_vis[:, 1])
+            z_center = np.mean(X_vis[:, 2])
+            
+            ax.set_xlim(x_center - max_range/2, x_center + max_range/2)
+            ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
+            ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
+            
+            # Configurar aspecto igual
+            ax.set_box_aspect([1,1,1])
+        
+        ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
         
         ruta_anomalias_3d = directorio_graficas / 'anomalies_3d.png'
         plt.savefig(ruta_anomalias_3d, dpi=300, bbox_inches='tight')

@@ -1,15 +1,21 @@
-# Isolation Forest - Detección de Anomalías basada en Árboles
+# Isolation Forest - Detección de Anomalías **OPTIMIZADA**
 
 ## 📋 Descripción
 
-Isolation Forest es un algoritmo de detección de anomalías basado en ensemble de árboles de decisión. Se basa en el principio de que las anomalías son más fáciles de "aislar" que los puntos normales, requiriendo menos particiones en el espacio de características.
+Isolation Forest es un algoritmo de detección de anomalías basado en ensemble de árboles de decisión. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
+
+### ⚡ Optimizaciones Implementadas
+- 🚀 **Muestreo estratégico**: Reducción inteligente a 10,000 muestras para optimización
+- 🎯 **Visualización optimizada**: Muestreo a 8,000 puntos para gráficas rápidas
+- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
+- ⚡ **Parámetros reducidos**: Grid simplificado para ejecución rápida
 
 ### Características Principales
-- ✅ Basado en ensemble de árboles de decisión
-- ✅ Rápido y altamente escalable
-- ✅ Funciona bien con datos de alta dimensionalidad
-- ✅ No requiere clustering previo
-- ✅ Eficiente en memoria
+- ✅ **Basado en ensemble de árboles** de decisión
+- ✅ **Muy rápido y altamente escalable** (optimizado)
+- ✅ **Excelente con alta dimensionalidad** 
+- ✅ **No requiere clustering previo**
+- ✅ **Eficiente en memoria**
 - ⚠️ Puede ser sensible al parámetro de contaminación
 
 ## 🎯 Objetivo
@@ -120,23 +126,21 @@ Todos los puntos con:
 ### `anomalies.csv`
 Solo puntos clasificados como anomalías (`is_outlier = 1`)
 
-## ⚙️ Configuración Avanzada
+## ⚙️ Configuración Avanzada **OPTIMIZADA**
 
-Para modificar parámetros de búsqueda, edita en `Isolation Forest.py`:
+Parámetros optimizados para ejecución rápida en `Isolation Forest.py`:
 
 ```python
 PARAMETROS_BUSQUEDA = {
-    'n_estimators': [100, 150],      # Número de árboles
-    'max_samples': ['auto', 0.8],    # Muestras por árbol
-    'contamination': [0.05, 0.1],    # Tasa de contaminación esperada
+    'n_estimators': [50, 100],       # Reducido para velocidad
+    'max_samples': ['auto'],         # Simplificado
+    'contamination': [0.05, 0.1],    # Tasa de contaminación esperada  
     'max_features': [1.0]            # Características por split
 }
-```
 
-Para datasets grandes:
-
-```python
-MAX_MUESTRAS_OPTIMIZACION = 50000  # Límite para optimización
+# Muestreo optimizado
+MAX_MUESTRAS_OPTIMIZACION = 10000  # Reducido para velocidad
+MAX_MUESTRAS_VISUALIZATION = 8000  # Visualizaciones
 ```
 
 ## 🔍 Interpretación de Resultados
@@ -240,4 +244,4 @@ Isolation Forest es especialmente adecuado para:
 ---
 
 **Última actualización**: Octubre 2025  
-**Versión**: 2.0
+**Versión**: 3.0 - **OPTIMIZADA** ⚡

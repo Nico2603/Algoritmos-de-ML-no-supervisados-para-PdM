@@ -21,16 +21,19 @@ import warnings
 # Suprimir warnings innecesarios
 warnings.filterwarnings('ignore')
 
-# Constantes de configuración
+# Constantes de configuración optimizadas
 RANDOM_STATE = 42
 K_MIN = 2
-K_MAX = 8  # Reducido para optimizar memoria en Google Colab
+K_MAX = 6  # Reducido aún más para rapidez
 FIGSIZE_2D = (10, 8)
 FIGSIZE_3D = (12, 9)
-SCATTER_SIZE = 30
-N_JOBS = 2  # Optimizado para Google Colab (limitación de memoria)
+SCATTER_SIZE = 15  # Reducido para mejor rendimiento visual
+N_JOBS = 1  # Secuencial para evitar problemas de memoria
 PCA_COMPONENTS_2D = 2
 PCA_COMPONENTS_3D = 3
+# Optimización de muestreo
+MAX_MUESTRAS_OPTIMIZACION = 15000  # Reducido significativamente para velocidad
+MAX_MUESTRAS_VISUALIZATION = 10000  # Muestreo adicional para visualización
 
 # Configuración de características (100% no-supervisado)
 USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
@@ -196,7 +199,7 @@ class KMeansAnalyzer:
         self.X_escalado = self.escalador.fit_transform(self.X)
         logging.info("Datos escalados correctamente.")
     
-    def reducir_muestra_para_optimizacion(self, max_muestras: int = 50000) -> Tuple[np.ndarray, np.ndarray]:
+    def reducir_muestra_para_optimizacion(self, max_muestras: int = MAX_MUESTRAS_OPTIMIZACION) -> Tuple[np.ndarray, np.ndarray]:
         """
         Reduce el tamaño de la muestra para optimización de parámetros si es muy grande.
         
@@ -218,6 +221,31 @@ class KMeansAnalyzer:
         
         logging.info(f"Dataset reducido para optimización: {len(self.X_escalado)} -> {len(X_reducido)} muestras")
         return X_reducido, indices_seleccionados
+    
+    def reducir_muestra_para_visualizacion(self, X: np.ndarray, etiquetas: np.ndarray = None, max_muestras: int = MAX_MUESTRAS_VISUALIZATION) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Reduce el tamaño de la muestra para visualización si es muy grande.
+        
+        Args:
+            X: Matriz de características.
+            etiquetas: Etiquetas correspondientes (opcional).
+            max_muestras: Número máximo de muestras para visualización.
+            
+        Returns:
+            Tupla con (X_reducido, etiquetas_reducidas o indices).
+        """
+        if len(X) <= max_muestras:
+            return X, etiquetas if etiquetas is not None else np.arange(len(X))
+        
+        np.random.seed(RANDOM_STATE)
+        indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
+        indices_seleccionados = np.sort(indices_seleccionados)
+        
+        X_reducido = X[indices_seleccionados]
+        etiquetas_reducidas = etiquetas[indices_seleccionados] if etiquetas is not None else indices_seleccionados
+        
+        logging.info(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
+        return X_reducido, etiquetas_reducidas
     
     def _evaluar_k(self, k: int) -> Tuple[int, float, float, float, float, np.ndarray, np.ndarray]:
         """Evaluar un valor específico de K para clustering"""
@@ -435,9 +463,12 @@ class KMeansAnalyzer:
         self._crear_visualizacion_2d_anomalias(X_pca_2d, distancias)
     
     def _crear_visualizacion_2d_clusters(self, X_pca: np.ndarray, pca: PCA) -> None:
-        """Crear visualización 2D de clusters (estandarizada con DBSCAN)"""
+        """Crear visualización 2D de clusters (estandarizada con DBSCAN) - OPTIMIZADA"""
+        # Aplicar muestreo para visualización si es necesario
+        X_vis, labels_vis = self.reducir_muestra_para_visualizacion(X_pca, self.labels)
+        
         plt.figure(figsize=FIGSIZE_2D)
-        scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=self.labels, 
+        scatter = plt.scatter(X_vis[:, 0], X_vis[:, 1], c=labels_vis, 
                             cmap='viridis', s=SCATTER_SIZE, alpha=0.7)
         plt.title('Clustering K-Means (2D con PCA)', fontsize=14)
         plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
@@ -471,19 +502,41 @@ class KMeansAnalyzer:
         logging.info(f"Visualización de anomalías 2D guardada en {ruta_anomalias_2d}")
     
     def _crear_visualizacion_3d_clusters(self, X_pca_3d: np.ndarray, pca_3d: PCA) -> None:
-        """Crear visualización 3D de clusters (estandarizada con DBSCAN)"""
+        """Crear visualización 3D de clusters (estandarizada con DBSCAN) - OPTIMIZADA"""
+        # Aplicar muestreo para visualización si es necesario
+        X_vis, labels_vis = self.reducir_muestra_para_visualizacion(X_pca_3d, self.labels)
+        
         fig = plt.figure(figsize=FIGSIZE_3D)
         ax = fig.add_subplot(111, projection='3d')
         
-        scatter = ax.scatter(X_pca_3d[:, 0], X_pca_3d[:, 1], X_pca_3d[:, 2], 
-                           c=self.labels, cmap='viridis', s=SCATTER_SIZE, alpha=0.7)
+        scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], X_vis[:, 2], 
+                           c=labels_vis, cmap='viridis', s=SCATTER_SIZE, alpha=0.7)
         
         ax.set_title('Clustering K-Means (3D con PCA)', fontsize=14)
         ax.set_xlabel(f'PC1 (Var: {pca_3d.explained_variance_ratio_[0]:.2%})')
         ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
         ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
         
-        legend = ax.legend(*scatter.legend_elements(), title="Clusters", loc='best')
+        # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
+        # Calcular rangos de datos
+        x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+        y_range = np.ptp(X_vis[:, 1])
+        z_range = np.ptp(X_vis[:, 2])
+        max_range = max(x_range, y_range, z_range)
+        
+        # Centrar y escalar los ejes
+        x_center = np.mean(X_vis[:, 0])
+        y_center = np.mean(X_vis[:, 1])
+        z_center = np.mean(X_vis[:, 2])
+        
+        ax.set_xlim(x_center - max_range/2, x_center + max_range/2)
+        ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
+        ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
+        
+        # Configurar aspecto igual
+        ax.set_box_aspect([1,1,1])
+        
+        legend = ax.legend(*scatter.legend_elements(), title="Clusters", loc='upper left', bbox_to_anchor=(0.02, 0.98))
         ax.add_artist(legend)
         
         ruta_clusters_3d = os.path.join(self.directorio_graficas, 'clusters_3d_pca.png')

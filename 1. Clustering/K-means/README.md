@@ -1,14 +1,20 @@
-# K-Means - Algoritmo de Clustering por Centroides
+# K-Means - Algoritmo de Clustering por Centroides **OPTIMIZADO**
 
 ## 📋 Descripción
 
-K-Means es un algoritmo de clustering que particiona los datos en K grupos (clusters) minimizando la varianza dentro de cada grupo. Es uno de los algoritmos de clustering más utilizados por su simplicidad y eficiencia.
+K-Means es un algoritmo de clustering que particiona los datos en K grupos (clusters) minimizando la varianza dentro de cada grupo. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
+
+### ⚡ Optimizaciones Implementadas
+- 🚀 **Muestreo estratégico**: Reducción inteligente a 15,000 muestras para optimización de parámetros
+- 🎯 **Visualización optimizada**: Muestreo a 10,000 puntos para gráficas rápidas y claras
+- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
+- ⚡ **K reducido**: Búsqueda limitada a K=2-6 para ejecución rápida
 
 ### Características Principales
-- ✅ Simple y rápido
-- ✅ Escalable a grandes datasets
-- ✅ Funciona bien con clusters esféricos y de tamaño similar
-- ✅ Asignación determinística de puntos a clusters
+- ✅ **Muy rápido** - Optimizado para ejecución veloz
+- ✅ **Escalable** - Maneja datasets de 500k+ registros eficientemente  
+- ✅ **Visualizaciones mejoradas** - Gráficas 3D con proporciones correctas
+- ✅ **Asignación determinística** de puntos a clusters
 - ⚠️ Requiere especificar el número de clusters a priori
 - ⚠️ Sensible a inicialización y outliers
 
@@ -99,13 +105,15 @@ El script ejecutará automáticamente:
 - Mapa de calor de scores de anomalía
 - Puntos más rojos = más alejados de su centroide
 
-## 🔧 Parámetros del Algoritmo
+## 🔧 Parámetros del Algoritmo **OPTIMIZADOS**
 
-El script busca automáticamente el K óptimo en el rango:
+El script busca automáticamente el K óptimo en el rango **reducido para velocidad**:
 
 ```python
 K_MIN = 2
-K_MAX = 8
+K_MAX = 6  # Reducido de 8 a 6 para ejecución rápida
+MAX_MUESTRAS_OPTIMIZACION = 15000  # Muestreo estratégico 
+MAX_MUESTRAS_VISUALIZATION = 10000  # Muestreo para gráficas
 ```
 
 Selección basada en el **Silhouette Score máximo**.
@@ -203,4 +211,4 @@ Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supe
 ---
 
 **Última actualización**: Octubre 2025  
-**Versión**: 2.0
+**Versión**: 3.0 - **OPTIMIZADA** ⚡

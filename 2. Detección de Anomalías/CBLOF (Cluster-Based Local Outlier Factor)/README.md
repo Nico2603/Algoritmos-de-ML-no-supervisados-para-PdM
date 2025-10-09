@@ -1,14 +1,20 @@
-# CBLOF - Cluster-Based Local Outlier Factor
+# CBLOF - Cluster-Based Local Outlier Factor **OPTIMIZADO**
 
 ## 📋 Descripción
 
-CBLOF es un algoritmo de detección de anomalías que utiliza clustering para proporcionar contexto local. Clasifica las anomalías basándose en qué tan lejos están los puntos de su cluster más cercano, considerando tanto el tamaño como la distancia de los clusters.
+CBLOF es un algoritmo de detección de anomalías que utiliza clustering para proporcionar contexto local. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
+
+### ⚡ Optimizaciones Implementadas
+- 🚀 **Muestreo estratégico**: Reducción inteligente a 8,000 muestras para optimización
+- 🎯 **Visualización optimizada**: Muestreo a 6,000 puntos para gráficas rápidas  
+- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
+- ⚡ **Grid simplificado**: Parámetros fijos para ejecución rápida
 
 ### Características Principales
-- ✅ Utiliza clustering para contexto local
-- ✅ Bueno para detectar anomalías locales dentro de clusters
-- ✅ Considera la densidad y estructura de los datos
-- ✅ Puede identificar diferentes tipos de anomalías
+- ✅ **Utiliza clustering** para contexto local
+- ✅ **Excelente para anomalías locales** dentro de clusters
+- ✅ **Considera densidad y estructura** de los datos
+- ✅ **Optimizado para datasets grandes** (500k+ registros)
 - ⚠️ Requiere especificar número de clusters
 - ⚠️ Más sensible a la elección de parámetros
 
@@ -120,25 +126,23 @@ Todos los puntos con:
 ### `anomalies.csv`
 Solo puntos clasificados como anomalías (`is_outlier = 1`)
 
-## ⚙️ Configuración Avanzada
+## ⚙️ Configuración Avanzada **OPTIMIZADA**
 
-Para modificar parámetros de búsqueda, edita en `CBLOF.PY`:
+Parámetros optimizados para ejecución rápida en `CBLOF.PY`:
 
 ```python
 PARAM_GRID = {
-    'n_clusters': [5, 10],      # Número de clusters internos
-    'alpha': [0.7, 0.9],        # Peso de clusters grandes
-    'beta': [5, 7],             # Umbral para clusters pequeños
-    'use_weights': [True, False]
+    'n_clusters': [5, 8],       # Reducido para velocidad
+    'alpha': [0.8],             # Solo un valor para simplicidad
+    'beta': [5],                # Solo un valor para simplicidad
+    'use_weights': [True]       # Solo True para simplicidad
 }
 
 CONTAMINACION_DEFAULT = 0.1     # Proporción esperada de anomalías
-```
 
-Para datasets grandes:
-
-```python
-MAX_MUESTRAS_OPTIMIZACION = 50000  # Límite para optimización
+# Muestreo optimizado
+MAX_MUESTRAS_OPTIMIZACION = 8000   # Reducido para velocidad
+MAX_MUESTRAS_VISUALIZATION = 6000  # Visualizaciones
 ```
 
 ## 🔍 Interpretación de Resultados
@@ -221,4 +225,4 @@ Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supe
 ---
 
 **Última actualización**: Octubre 2025  
-**Versión**: 2.0
+**Versión**: 3.0 - **OPTIMIZADA** ⚡
