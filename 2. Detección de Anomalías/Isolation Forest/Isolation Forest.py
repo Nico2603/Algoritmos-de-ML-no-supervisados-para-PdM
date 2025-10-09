@@ -342,23 +342,38 @@ def buscar_mejores_parametros(X_escalado: np.ndarray, logger: logging.Logger, pa
     return mejor_resultado
 
 
-def guardar_metricas(ruta_archivo: Path, mejor_resultado: Tuple, n_anomalias: int, porcentaje_anomalias: float) -> None:
+def guardar_metricas(ruta_archivo: Path, mejor_resultado: Tuple, n_anomalias: int, porcentaje_anomalias: float, 
+                    scores: np.ndarray) -> None:
     """
-    Guarda las métricas del modelo en un archivo de texto (100% no-supervisado).
+    Guarda las métricas del modelo en un archivo de texto (formato estandarizado con CBLOF).
     
     Args:
         ruta_archivo: Ruta donde guardar las métricas
         mejor_resultado: Tupla con los mejores resultados
         n_anomalias: Número de anomalías detectadas
         porcentaje_anomalias: Porcentaje de anomalías
+        scores: Scores de anomalía
     """
     separacion_scores, mejores_params, _ = mejor_resultado
     
     with open(ruta_archivo, 'w', encoding='utf-8') as f:
-        f.write(f"Mejores parámetros: {mejores_params}\n")
+        f.write("=== MÉTRICAS DEL MODELO ISOLATION FOREST ===\n\n")
+        f.write(f"Mejores parámetros: {mejores_params}\n\n")
+        
+        f.write("Métricas de optimización:\n")
+        f.write(f"Separación de scores (P95-P50): {separacion_scores:.4f}\n")
+        f.write(f"Desviación estándar de scores: {np.std(scores):.4f}\n")
+        f.write(f"Media de scores: {np.mean(scores):.4f}\n\n")
+        
+        f.write("Métricas de anomalías:\n")
         f.write(f"Número de anomalías detectadas: {n_anomalias}\n")
         f.write(f"Porcentaje de anomalías detectadas: {porcentaje_anomalias:.4f}%\n")
-        f.write(f"Separación de scores (P95-P50): {separacion_scores:.4f}\n")
+        f.write(f"Media de puntuaciones de anomalía: {np.mean(scores):.4f}\n\n")
+        
+        f.write("Estadísticas de puntuaciones:\n")
+        f.write(f"Score mínimo: {np.min(scores):.4f}\n")
+        f.write(f"Score máximo: {np.max(scores):.4f}\n")
+        f.write(f"Desviación estándar: {np.std(scores):.4f}\n")
 
 
 def guardar_modelo(modelo: IsolationForest, scores: np.ndarray, etiquetas: np.ndarray, 
@@ -557,7 +572,7 @@ def main() -> None:
         
         # Guardar resultados
         ruta_metricas = directorios.directorio_metricas / ARCHIVO_METRICAS
-        guardar_metricas(ruta_metricas, mejor_resultado, n_anomalias, porcentaje_anomalias)
+        guardar_metricas(ruta_metricas, mejor_resultado, n_anomalias, porcentaje_anomalias, scores_pred)
         logger.info(f"Métricas guardadas en {ruta_metricas}")
         
         # Guardar modelo

@@ -344,33 +344,38 @@ class KMeansAnalyzer:
         logging.info(f"Inercia (SSE): {self.metricas_finales['inertia']:.2f}")
     
     def calcular_puntuaciones_anomalia(self) -> None:
-        """Calcular puntuaciones de anomalías"""
+        """Calcular puntuaciones de anomalías (estandarizado con DBSCAN)"""
         # Distancia al centroide del cluster asignado
         distancias = np.linalg.norm(
             self.X_escalado - self.cluster_centers[self.labels], axis=1
         )
-        # Estandarizar nombres de columnas
+        # Estandarizar nombres de columnas (consistente con DBSCAN)
         self.datos['anomaly_score'] = distancias  # Score estándar
-        self.datos['is_outlier'] = 0  # K-Means no detecta outliers binarios
+        self.datos['is_outlier'] = 0  # K-Means no detecta outliers binarios (siempre 0)
         self.datos['cluster_id'] = self.labels  # ID del cluster asignado
         logging.info("Puntuación de anomalías calculada para cada punto de datos.")
     
 
     
     def guardar_resultados(self) -> None:
-        """Guardar todos los resultados del análisis"""
-        # Guardar métricas
+        """Guardar todos los resultados del análisis (formato estandarizado)"""
+        # Guardar métricas en formato estandarizado con DBSCAN
         ruta_metricas = os.path.join(self.directorio_metricas, 'metrics.txt')
         with open(ruta_metricas, 'w', encoding='utf-8') as f:
-            f.write(f"Número de clusters: {self.metricas_finales['k_optimo']}\n")
-            f.write(f"Silhouette Score: {self.metricas_finales['silhouette']:.4f}\n")
-            f.write(f"Calinski-Harabasz Score: {self.metricas_finales['calinski_harabasz']:.4f}\n")
-            f.write(f"Davies-Bouldin Score: {self.metricas_finales['davies_bouldin']:.4f}\n")
-            f.write(f"Inercia (SSE): {self.metricas_finales['inertia']:.2f}\n")
+            f.write("=== RESULTADOS CLUSTERING K-MEANS ===\n\n")
+            f.write(f"Mejores parámetros:\n")
+            f.write(f"  - k_clusters: {self.metricas_finales['k_optimo']}\n\n")
+            f.write(f"Resultados del clustering:\n")
+            f.write(f"  - Número de clusters: {self.metricas_finales['k_optimo']}\n")
+            f.write(f"  - Inercia (SSE): {self.metricas_finales['inertia']:.2f}\n\n")
+            f.write(f"Métricas de calidad:\n")
+            f.write(f"  - Coeficiente Silhouette: {self.metricas_finales['silhouette']:.4f}\n")
+            f.write(f"  - Calinski-Harabasz Score: {self.metricas_finales['calinski_harabasz']:.4f}\n")
+            f.write(f"  - Davies-Bouldin Index: {self.metricas_finales['davies_bouldin']:.4f}\n")
         
-        # Guardar puntuaciones de anomalías con fecha, XYZ y scores (estandarizado)
+        # Guardar puntuaciones de anomalías con fecha, XYZ y scores (estandarizado con DBSCAN)
         ruta_scores = os.path.join(self.directorio_metricas, 'anomaly_scores.csv')
-        datos_salida = self.datos[['fecha'] + CARACTERISTICAS_BASE + ['anomaly_score', 'cluster_id']].copy()
+        datos_salida = self.datos[['fecha'] + CARACTERISTICAS_BASE + ['anomaly_score', 'is_outlier', 'cluster_id']].copy()
         datos_salida.to_csv(ruta_scores, index=False)
         
         # Guardar métricas en CSV estándar (100% no-supervisado)
@@ -410,7 +415,7 @@ class KMeansAnalyzer:
         logging.info(f"Modelo guardado como h5 en {ruta_modelo_h5}")
     
     def crear_visualizaciones(self) -> None:
-        """Crear todas las visualizaciones"""
+        """Crear todas las visualizaciones (estandarizadas con DBSCAN)"""
         # PCA para visualización 2D
         pca_2d = PCA(n_components=PCA_COMPONENTS_2D)
         X_pca_2d = pca_2d.fit_transform(self.X_escalado)
@@ -422,23 +427,25 @@ class KMeansAnalyzer:
         # Distancias para anomalías
         distancias = self.datos['anomaly_score'].values
         
-        # Crear visualizaciones
-        self._crear_visualizacion_2d_clusters(X_pca_2d)
+        # Crear visualizaciones estandarizadas (mismos nombres que DBSCAN)
+        self._crear_visualizacion_2d_clusters(X_pca_2d, pca_2d)
+        self._crear_visualizacion_3d_clusters(X_pca_3d, pca_3d)
+        
+        # Visualización adicional de anomalías (opcional, no requerida para comparación)
         self._crear_visualizacion_2d_anomalias(X_pca_2d, distancias)
-        self._crear_visualizacion_3d_clusters(X_pca_3d)
     
-    def _crear_visualizacion_2d_clusters(self, X_pca: np.ndarray) -> None:
-        """Crear visualización 2D de clusters"""
+    def _crear_visualizacion_2d_clusters(self, X_pca: np.ndarray, pca: PCA) -> None:
+        """Crear visualización 2D de clusters (estandarizada con DBSCAN)"""
         plt.figure(figsize=FIGSIZE_2D)
         scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=self.labels, 
                             cmap='viridis', s=SCATTER_SIZE, alpha=0.7)
-        plt.title('Clustering K-Means (Visualización con PCA)', fontsize=14)
-        plt.xlabel('Componente Principal 1')
-        plt.ylabel('Componente Principal 2')
+        plt.title('Clustering K-Means (2D con PCA)', fontsize=14)
+        plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
+        plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
         plt.legend(*scatter.legend_elements(), title="Clusters", loc='best')
         plt.grid(True, alpha=0.3)
         
-        ruta_clusters_2d = os.path.join(self.directorio_graficas, 'clusters_pca.png')
+        ruta_clusters_2d = os.path.join(self.directorio_graficas, 'clusters_2d_pca.png')
         plt.savefig(ruta_clusters_2d, dpi=300, bbox_inches='tight')
         plt.show()
         plt.close()
@@ -463,23 +470,23 @@ class KMeansAnalyzer:
         
         logging.info(f"Visualización de anomalías 2D guardada en {ruta_anomalias_2d}")
     
-    def _crear_visualizacion_3d_clusters(self, X_pca_3d: np.ndarray) -> None:
-        """Crear visualización 3D de clusters"""
+    def _crear_visualizacion_3d_clusters(self, X_pca_3d: np.ndarray, pca_3d: PCA) -> None:
+        """Crear visualización 3D de clusters (estandarizada con DBSCAN)"""
         fig = plt.figure(figsize=FIGSIZE_3D)
         ax = fig.add_subplot(111, projection='3d')
         
         scatter = ax.scatter(X_pca_3d[:, 0], X_pca_3d[:, 1], X_pca_3d[:, 2], 
                            c=self.labels, cmap='viridis', s=SCATTER_SIZE, alpha=0.7)
         
-        ax.set_title('Clustering K-Means en 3D (Visualización con PCA)', fontsize=14)
-        ax.set_xlabel('Componente Principal 1')
-        ax.set_ylabel('Componente Principal 2')
-        ax.set_zlabel('Componente Principal 3')
+        ax.set_title('Clustering K-Means (3D con PCA)', fontsize=14)
+        ax.set_xlabel(f'PC1 (Var: {pca_3d.explained_variance_ratio_[0]:.2%})')
+        ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
+        ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
         
         legend = ax.legend(*scatter.legend_elements(), title="Clusters", loc='best')
         ax.add_artist(legend)
         
-        ruta_clusters_3d = os.path.join(self.directorio_graficas, 'clusters_3d.png')
+        ruta_clusters_3d = os.path.join(self.directorio_graficas, 'clusters_3d_pca.png')
         plt.savefig(ruta_clusters_3d, dpi=300, bbox_inches='tight')
         plt.show()
         plt.close()

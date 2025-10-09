@@ -1,2 +1,0 @@
-algoritmo,params_json,n_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,pct_anomalias,p95_minus_p50,mean_score
-DBSCAN,"{""eps"": 0.1, ""min_samples"": 4}",1133,-0.5693459510803223,16.757429122924805,1.013021715672985,16.644000000000002,0.17318553603016054,0.03718936342793206

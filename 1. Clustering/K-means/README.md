@@ -1,303 +1,206 @@
-# 🎯 Algoritmo K-Means para Mantenimiento Predictivo
+# K-Means - Algoritmo de Clustering por Centroides
 
-## 📋 Descripción General
+## 📋 Descripción
 
-Este módulo implementa el algoritmo **K-Means** para clustering de datos de acelerómetro, diseñado específicamente para mantenimiento predictivo. El algoritmo identifica patrones operativos normales y calcula puntuaciones de anomalía basadas en la distancia a los centroides de clusters.
+K-Means es un algoritmo de clustering que particiona los datos en K grupos (clusters) minimizando la varianza dentro de cada grupo. Es uno de los algoritmos de clustering más utilizados por su simplicidad y eficiencia.
 
-## 🔬 ¿Qué es K-Means?
+### Características Principales
+- ✅ Simple y rápido
+- ✅ Escalable a grandes datasets
+- ✅ Funciona bien con clusters esféricos y de tamaño similar
+- ✅ Asignación determinística de puntos a clusters
+- ⚠️ Requiere especificar el número de clusters a priori
+- ⚠️ Sensible a inicialización y outliers
 
-**K-Means** es un algoritmo de clustering no supervisado que:
-- Divide los datos en **K clusters** (grupos)
-- Cada cluster tiene un **centroide** (punto central)
-- Los puntos se asignan al cluster con el centroide más cercano
-- Es ideal para identificar **modos de operación** diferentes en maquinaria
+## 🎯 Objetivo
 
-### 🎯 Aplicación en PdM
-- **Operación Normal**: Puntos cerca de centroides
-- **Anomalías**: Puntos lejos de todos los centroides
-- **Patrones**: Diferentes clusters = diferentes condiciones operativas
+Agrupar datos de acelerómetro en K clusters para identificar patrones de operación normal en equipos industriales, facilitando la detección de comportamientos anómalos mediante el análisis de distancia a centroides.
 
-## ⚙️ Características del Código
+## 📁 Estructura de Archivos
 
-### 🔧 Capacidades Principales
-- ✅ **Detección automática de K óptimo** usando Silhouette Score
-- ✅ **Optimización de memoria** para datasets grandes
-- ✅ **Múltiples métricas de evaluación** (Silhouette, Calinski-Harabasz, Davies-Bouldin)
-- ✅ **Visualizaciones 2D y 3D** con PCA
-- ✅ **Cálculo de puntuaciones de anomalía** para cada punto
-- ✅ **Outputs estandarizados** compatibles con sistema de comparación
-
-### 🛠️ Correcciones Implementadas
-- **🔒 Carga 100% No-Supervisada**: Implementado patrón blindado con `usecols=['acceleration_x','acceleration_y','acceleration_z','fecha']`
-- **🔴 Bug Crítico Corregido**: Ahora usa `kmeans_final.labels_` en lugar de labels del dataset reducido
-- **📊 Métricas Recalculadas**: Métricas finales calculadas en el dataset completo
-- **📝 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier`, `cluster_id` con fecha incluida
-- **📈 CSV de Métricas**: Archivo `metrics.csv` para comparación entre algoritmos
-- **🛡️ Sin Dependencias Supervisadas**: Eliminadas todas las referencias a etiquetas externas
-
-## 📊 Datos de Entrada
-
-### 📄 Archivo Requerido
-- **Nombre**: `data.csv`
-- **Ubicación**: Misma carpeta que el script
-- **Formato**: CSV con headers
-
-### 📝 Columnas Requeridas (100% No-Supervisado)
-```csv
-fecha,acceleration_x,acceleration_y,acceleration_z
-2024-01-15 10:30:00,1.2,0.8,9.8
-2024-01-15 10:30:01,1.1,0.9,9.9
-2024-01-15 10:30:02,1.3,0.7,9.7
+```
+K-means/
+├── K-means.py                         # Script principal
+├── data.csv                           # Dataset de entrada
+├── README.md                          # Este archivo
+│
+├── graficas_KMeans/                   # Gráficas generadas
+│   ├── clusters_2d_pca.png           # Visualización 2D con PCA
+│   ├── clusters_3d_pca.png           # Visualización 3D con PCA
+│   ├── elbow_method.png              # Método del codo (K óptimo)
+│   ├── silhouette_scores.png         # Scores Silhouette por K
+│   ├── calinski_harabasz_scores.png  # Scores Calinski-Harabasz por K
+│   ├── davies_bouldin_scores.png     # Scores Davies-Bouldin por K
+│   └── anomalies_pca.png             # Visualización de anomalías
+│
+├── metricas_KMeans/                   # Métricas y resultados
+│   ├── output.log                    # Log de ejecución completo
+│   ├── metrics.txt                   # Métricas en formato texto
+│   ├── metrics.csv                   # Métricas estandarizadas (para comparación)
+│   └── anomaly_scores.csv            # Scores de todos los puntos
+│
+└── modelos_entrenados_KMeans/        # Modelos guardados
+    ├── kmeans_model.pkl              # Modelo en formato Pickle
+    ├── kmeans_model.h5               # Modelo en formato HDF5
+    └── scaler.pkl                    # Escalador para inferencia
 ```
 
-⚠️ **Importante**: El script **solo carga estas 4 columnas** usando `usecols`. Cualquier otra columna en el CSV (como 'severity', 'label', etc.) será **ignorada completamente**, garantizando operación 100% no-supervisada.
+## 🚀 Uso
 
-### 🧮 Características Generadas
-El código automáticamente calcula:
-- **Magnitud de aceleración**: `√(x² + y² + z²)`
-- **Características finales**: [x, y, z, magnitud]
+### Requisitos
 
-## 🚀 Cómo Ejecutar
-
-### 📋 Requisitos
 ```bash
-pip install numpy pandas scikit-learn matplotlib joblib h5py
+pip install numpy pandas matplotlib scikit-learn joblib h5py
 ```
 
-### ⚡ Ejecución
+### Ejecución
+
 ```bash
-# Desde la carpeta del algoritmo
-cd "1. Clustering/K-means"
 python K-means.py
 ```
 
-### 🔧 Configuración de Parámetros
+El script ejecutará automáticamente:
+1. ✅ Carga y preprocesamiento de datos
+2. ✅ Búsqueda del K óptimo (número de clusters)
+3. ✅ Generación de gráficas de evaluación (codo, silhouette, etc.)
+4. ✅ Entrenamiento del modelo final con K óptimo
+5. ✅ Generación de visualizaciones de clusters
+6. ✅ Cálculo de scores de anomalía (distancia a centroides)
+
+## 📊 Métricas Generadas
+
+### Métricas de Clustering
+- **Silhouette Score**: Mide qué tan bien están separados los clusters (0-1, mayor es mejor)
+- **Calinski-Harabasz Score**: Ratio de dispersión entre/dentro de clusters (mayor es mejor)
+- **Davies-Bouldin Index**: Similitud promedio entre clusters (menor es mejor)
+- **Inercia (SSE)**: Suma de distancias cuadráticas a centroides (menor es mejor)
+
+### Métricas de Anomalía
+- **Anomaly Score**: Distancia euclidiana de cada punto a su centroide asignado
+- **Separación de Scores (P95-P50)**: Distinguibilidad de puntos alejados
+
+## 📈 Visualizaciones
+
+### 1. Método del Codo (`elbow_method.png`)
+- Muestra la inercia vs número de clusters
+- El "codo" indica el K óptimo
+
+### 2. Gráficas de Métricas por K
+- `silhouette_scores.png`: Silhouette Score para diferentes K
+- `calinski_harabasz_scores.png`: Calinski-Harabasz para diferentes K
+- `davies_bouldin_scores.png`: Davies-Bouldin para diferentes K
+
+### 3. Clusters en 2D y 3D
+- `clusters_2d_pca.png`: Visualización 2D con PCA
+- `clusters_3d_pca.png`: Visualización 3D con PCA
+- Cada cluster con color diferente
+
+### 4. Anomalías (`anomalies_pca.png`)
+- Mapa de calor de scores de anomalía
+- Puntos más rojos = más alejados de su centroide
+
+## 🔧 Parámetros del Algoritmo
+
+El script busca automáticamente el K óptimo en el rango:
+
 ```python
-# En el código (constantes al inicio)
-K_MIN = 2          # Mínimo número de clusters a evaluar
-K_MAX = 8          # Máximo número de clusters a evaluar
-RANDOM_STATE = 42  # Semilla para reproducibilidad
-N_JOBS = 2         # Procesos paralelos (ajustar según CPU)
+K_MIN = 2
+K_MAX = 8
 ```
 
-## 📂 Estructura del Código
+Selección basada en el **Silhouette Score máximo**.
 
-### 🏗️ Clase Principal: `KMeansAnalyzer`
+## 📄 Archivos de Salida
 
-#### 📁 Métodos Principales
+### `metrics.csv` (Para Comparación)
+Formato estandarizado con columnas:
+- algoritmo, params_json, n_clusters, silhouette_score, calinski_harabasz_score, davies_bouldin_score, pct_anomalias, p95_minus_p50, mean_score
 
-| Método | Propósito | Descripción |
-|--------|-----------|-------------|
-| `cargar_datos()` | 📄 Carga de datos | Lee CSV, valida columnas, maneja encoding |
-| `escalar_datos()` | 📏 Normalización | StandardScaler para normalizar características |
-| `encontrar_k_optimo()` | 🎯 Optimización | Evalúa K=2 a K=8, selecciona por Silhouette |
-| `entrenar_modelo_final()` | 🏆 Modelo final | Entrena K-Means con K óptimo |
-| `calcular_puntuaciones_anomalia()` | 📊 Scoring | Calcula distancias a centroides |
-| `crear_visualizaciones()` | 📈 Gráficos | PCA 2D/3D para visualización |
-| `guardar_resultados()` | 💾 Outputs | Guarda modelos, métricas y scores |
+### `anomaly_scores.csv`
+Todos los puntos con:
+- fecha, acceleration_x, acceleration_y, acceleration_z, anomaly_score, is_outlier, cluster_id
 
-#### 🔄 Flujo de Ejecución
-```mermaid
-graph TD
-    A[Cargar data.csv] --> B[Validar columnas]
-    B --> C[Crear magnitud_aceleración]
-    C --> D[Escalar datos]
-    D --> E[Reducir muestra para optimización]
-    E --> F[Evaluar K=2 a K=8 en paralelo]
-    F --> G[Seleccionar K óptimo por Silhouette]
-    G --> H[Entrenar modelo final en dataset completo]
-    H --> I[Calcular puntuaciones de anomalía]
-    I --> J[Crear visualizaciones]
-    J --> K[Guardar resultados]
-```
+**Nota**: K-Means no detecta outliers binarios, por lo que `is_outlier` siempre es 0. El `anomaly_score` indica la distancia al centroide.
 
-## 📁 Archivos Generados
+## ⚙️ Configuración Avanzada
 
-### 📊 Métricas y Resultados
-```
-metricas_KMeans/
-├── metrics.txt           # Métricas en formato texto
-├── metrics.csv          # ✅ Métricas estandarizadas para comparación
-├── scores_kmeans.csv    # ✅ Todos los datos con scores
-└── output.log           # Log detallado de ejecución
-```
+Para modificar el rango de búsqueda de K, edita en `K-means.py`:
 
-### 📈 Visualizaciones
-```
-graficas_KMeans/
-├── elbow_method.png           # Método del codo (inercia vs K)
-├── silhouette_scores.png      # Silhouette score vs K
-├── calinski_harabasz_scores.png # Calinski-Harabasz vs K
-├── davies_bouldin_scores.png  # Davies-Bouldin vs K
-├── clusters_pca.png           # Clusters en 2D (PCA)
-├── anomalies_pca.png          # Mapa de calor de anomalías 2D
-└── clusters_3d.png            # Clusters en 3D (PCA)
-```
-
-### 🤖 Modelos Entrenados
-```
-modelos_entrenados_KMeans/
-├── kmeans_model.pkl     # Modelo en formato pickle
-└── kmeans_model.h5      # Datos del modelo en HDF5
-```
-
-## 📊 Formato de Outputs
-
-### 📄 scores_kmeans.csv (Principal)
-```csv
-fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
-2024-01-15 10:30:00,1.2,0.8,9.8,9.85,0.234,0,2
-2024-01-15 10:30:01,1.1,0.9,9.9,9.92,0.189,0,2
-2024-01-15 10:30:02,2.5,1.5,8.2,8.59,1.456,0,1
-```
-
-🔒 **Garantía No-Supervisada**: Este archivo contiene **solo** datos de sensores (XYZ) + fecha + scores calculados + cluster asignado. No hay referencias a etiquetas supervisadas.
-
-### 📊 metrics.csv (Para Comparación)
-```csv
-algoritmo,k_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,inertia,n_anomalias,porcentaje_anomalias,media_anomaly_score
-K-Means,3,0.7234,1456.78,0.892,2345.67,0,0.0,0.3456
-```
-
-## 🎯 Interpretación de Resultados
-
-### 📊 Métricas de Calidad
-
-| Métrica | Rango | Mejor | Interpretación |
-|---------|-------|-------|----------------|
-| **Silhouette Score** | [-1, 1] | Mayor | Qué tan bien separados están los clusters |
-| **Calinski-Harabasz** | [0, ∞] | Mayor | Ratio varianza inter/intra cluster |
-| **Davies-Bouldin** | [0, ∞] | Menor | Promedio de similitud cluster/separación |
-| **Inercia (SSE)** | [0, ∞] | Menor | Suma de distancias cuadradas a centroides |
-
-### 🚨 Puntuaciones de Anomalía
-- **anomaly_score**: Distancia euclidiana al centroide del cluster asignado
-- **Valores altos**: Puntos alejados del comportamiento normal del cluster
-- **Valores bajos**: Puntos cercanos al comportamiento típico
-
-### 🎨 Interpretación de Clusters
-- **Cluster 0, 1, 2...**: Diferentes modos operativos de la máquina
-- **Centroides**: Condiciones típicas de cada modo
-- **Dispersión**: Variabilidad normal dentro de cada modo
-
-## ⚙️ Parámetros Avanzados
-
-### 🔧 Optimización de Memoria
 ```python
-MAX_MUESTRAS_OPTIMIZACION = 50000  # Reducir si hay problemas de memoria
-N_JOBS = 2                          # Ajustar según CPU disponible
+K_MIN = 2     # Mínimo número de clusters
+K_MAX = 8     # Máximo número de clusters
 ```
 
-### 🎯 Rango de K
+Para grandes datasets, ajusta:
+
 ```python
-K_MIN = 2    # Mínimo clusters (cambiar si conoces el dominio)
-K_MAX = 8    # Máximo clusters (aumentar para más granularidad)
+MAX_MUESTRAS_OPTIMIZACION = 50000  # Máximo para búsqueda de K
 ```
 
-### 📊 Visualización
-```python
-FIGSIZE_2D = (10, 8)    # Tamaño gráficos 2D
-FIGSIZE_3D = (12, 9)    # Tamaño gráficos 3D
-SCATTER_SIZE = 30       # Tamaño puntos en gráficos
-```
+## 🔍 Interpretación de Resultados
 
-## 🚨 Casos de Uso y Limitaciones
+### Clusters Identificados
+- Cada punto se asigna a exactamente un cluster
+- `cluster_id` indica el cluster asignado (0, 1, 2, ...)
+- Los centroides representan los "centros" de cada grupo
 
-### ✅ Casos Ideales
-- **Identificar modos operativos**: Diferentes velocidades, cargas, condiciones
-- **Detectar deriva operativa**: Cambios graduales en patrones
-- **Segmentación de datos**: Separar condiciones normales vs especiales
-- **Baseline para anomalías**: Definir "normal" para cada modo
+### Scores de Anomalía
+- **Mayor distancia al centroide** = comportamiento más inusual dentro del cluster
+- Útil para detección de cambios en patrones de operación
+- No son outliers binarios, sino grados de "normalidad"
 
-### ⚠️ Limitaciones
-- **K debe especificarse**: Aunque se optimiza automáticamente
-- **Clusters esféricos**: Asume clusters de forma circular/esférica
-- **Sensible a escala**: Por eso se aplica StandardScaler
-- **No maneja ruido**: Todos los puntos se asignan a algún cluster
+## 📊 Comparación con Otros Algoritmos
 
-### 🎯 Cuándo Usar K-Means
-- ✅ Tienes idea aproximada del número de modos operativos
-- ✅ Los clusters tienen formas aproximadamente esféricas
-- ✅ Quieres interpretabilidad (centroides = condiciones típicas)
-- ✅ Necesitas ejecución rápida y eficiente
+Para comparar K-Means con DBSCAN:
 
-## 🔗 Integración con Sistema Completo
-
-### 📊 Compatibilidad
-- **Outputs estandarizados** para `sistema_comparacion_algoritmos.py`
-- **Métricas CSV** para análisis comparativo
-- **Scores normalizados** para sistema de severidad unificado
-
-### 🔄 En Pipeline de PdM
-1. **Entrenamiento inicial**: Identificar modos operativos normales
-2. **Scoring en tiempo real**: Calcular distancia a centroides
-3. **Alertas**: Umbral en anomaly_score para mantenimiento preventivo
-4. **Reentrenamiento**: Mensual o cuando cambien condiciones operativas
-
-## 🛠️ Troubleshooting
-
-### ❌ Errores Comunes
-
-#### "FileNotFoundError: data.csv"
 ```bash
-# Solución: Verificar que data.csv esté en la misma carpeta
-ls data.csv  # Debe existir
+cd ../Comparaciones
+python comparar_algoritmos.py
 ```
 
-#### "ValueError: Columnas faltantes"
-```python
-# Verificar columnas en CSV
-print(pd.read_csv('data.csv').columns)
-# Debe incluir: acceleration_x, acceleration_y, acceleration_z
-```
+Esto generará:
+- Comparación visual lado a lado
+- Gráficos comparativos de métricas
+- Reporte detallado con análisis
+- Determinación del mejor algoritmo
 
-#### "MemoryError en datasets grandes"
-```python
-# Reducir MAX_MUESTRAS_OPTIMIZACION
-MAX_MUESTRAS_OPTIMIZACION = 10000  # En lugar de 50000
-```
+## 🎓 Ventajas y Desventajas
 
-#### "Silhouette Score muy bajo (<0.3)"
-- **Causa**: Datos no tienen estructura de clusters clara
-- **Solución**: Revisar si K-Means es el algoritmo apropiado, considerar DBSCAN
+### ✅ Ventajas
+- Muy rápido y eficiente
+- Fácil de entender e implementar
+- Escalable a datasets muy grandes
+- Funciona bien cuando los clusters son esféricos
+- Resultados reproducibles (con semilla fija)
 
-### 📊 Validación de Resultados
-```python
-# Verificar que se generaron todos los archivos
-import os
-assert os.path.exists('metricas_KMeans/metrics.csv')
-assert os.path.exists('metricas_KMeans/scores_kmeans.csv')
-assert os.path.exists('graficas_KMeans/clusters_pca.png')
-```
+### ⚠️ Desventajas
+- Requiere especificar K a priori
+- Asume clusters de forma esférica y tamaño similar
+- Sensible a outliers (pueden afectar los centroides)
+- Sensible a la inicialización
+- No identifica outliers automáticamente
 
-## 📚 Referencias y Recursos
+## 🔄 Comparación con DBSCAN
 
-### 📖 Algoritmo K-Means
-- **Paper Original**: Lloyd, S.P. (1982). "Least squares quantization in PCM"
-- **Scikit-learn**: [K-Means Documentation](https://scikit-learn.org/stable/modules/clustering.html#k-means)
+| Característica | K-Means | DBSCAN |
+|----------------|---------|---------|
+| Necesita especificar K | ✅ Sí | ❌ No |
+| Detecta outliers | ❌ No | ✅ Sí |
+| Forma de clusters | Solo esféricos | Cualquier forma |
+| Velocidad | ⚡ Muy rápido | 🐌 Más lento |
+| Escalabilidad | ✅ Excelente | ⚠️ Limitada |
 
-### 📊 Métricas de Clustering
-- **Silhouette**: Rousseeuw, P.J. (1987). "Silhouettes: a graphical aid to the interpretation"
-- **Calinski-Harabasz**: Caliński, T. & Harabasz, J. (1974). "A dendrite method"
+## 📚 Referencias
 
-### 🔧 Mantenimiento Predictivo
-- **Condition Monitoring**: ISO 13374 - Condition monitoring and diagnostics
-- **Vibration Analysis**: ISO 10816 - Mechanical vibration evaluation
+- Lloyd, S. (1982). "Least squares quantization in PCM"
+- MacQueen, J. (1967). "Some methods for classification and analysis of multivariate observations"
+- Scikit-learn Documentation: https://scikit-learn.org/stable/modules/clustering.html#k-means
+
+## 🤝 Contribución al Proyecto
+
+Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de K-Means se comparan directamente con DBSCAN para determinar el mejor algoritmo de clustering para esta aplicación específica.
 
 ---
 
-## 🎯 Resumen Ejecutivo
-
-Este módulo K-Means ofrece:
-- ✅ **Detección automática** del número óptimo de clusters
-- ✅ **Identificación de patrones** operativos en maquinaria
-- ✅ **Puntuaciones de anomalía** para mantenimiento predictivo
-- ✅ **Visualizaciones comprensibles** para interpretación
-- ✅ **Integración completa** con sistema de comparación
-
-**Ideal para**: Identificar modos operativos, establecer baselines de normalidad, y detectar deriva en patrones de operación.
-
----
-
-*Desarrollado para mantenimiento predictivo con Machine Learning*  
-*Versión corregida y optimizada - Lista para producción* ✅
+**Última actualización**: Octubre 2025  
+**Versión**: 2.0

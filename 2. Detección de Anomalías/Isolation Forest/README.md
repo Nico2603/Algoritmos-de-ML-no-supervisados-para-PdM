@@ -1,418 +1,243 @@
-# 🌲 Algoritmo Isolation Forest para Mantenimiento Predictivo
+# Isolation Forest - Detección de Anomalías basada en Árboles
 
-## 📋 Descripción General
+## 📋 Descripción
 
-Este módulo implementa el algoritmo **Isolation Forest** para detección de anomalías en datos de acelerómetro, diseñado específicamente para mantenimiento predictivo. El algoritmo utiliza árboles de aislamiento para identificar puntos anómalos de manera eficiente y sin supervisión.
+Isolation Forest es un algoritmo de detección de anomalías basado en ensemble de árboles de decisión. Se basa en el principio de que las anomalías son más fáciles de "aislar" que los puntos normales, requiriendo menos particiones en el espacio de características.
 
-## 🔬 ¿Qué es Isolation Forest?
+### Características Principales
+- ✅ Basado en ensemble de árboles de decisión
+- ✅ Rápido y altamente escalable
+- ✅ Funciona bien con datos de alta dimensionalidad
+- ✅ No requiere clustering previo
+- ✅ Eficiente en memoria
+- ⚠️ Puede ser sensible al parámetro de contaminación
 
-**Isolation Forest** es un algoritmo de detección de anomalías que funciona bajo el principio de que:
-- **Las anomalías son raras** y diferentes del resto
-- **Son más fáciles de aislar** que los puntos normales
-- **Requieren menos divisiones** en un árbol para ser separadas
+## 🎯 Objetivo
 
-### 🌳 Conceptos Clave
-- **Árbol de Aislamiento**: Árbol binario que divide aleatoriamente el espacio
-- **Longitud de Camino**: Número de divisiones para llegar a un punto
-- **Score de Anomalía**: Basado en la longitud promedio de camino
-- **Ensemble**: Múltiples árboles para mayor robustez
+Detectar comportamientos anómalos en datos de acelerómetro para Mantenimiento Predictivo mediante aislamiento eficiente de puntos que se desvían del comportamiento normal, utilizando la profundidad de partición en árboles aleatorios.
 
-### 🚨 Aplicación en PdM
-- **Operación Normal**: Puntos difíciles de aislar (caminos largos)
-- **Anomalías**: Puntos fáciles de aislar (caminos cortos)
-- **Detección Global**: No asume distribución específica de datos
-- **Eficiencia**: Rápido en entrenamiento e inferencia
+## 📁 Estructura de Archivos
 
-## ⚙️ Características del Código
-
-### 🔧 Capacidades Principales
-- ✅ **Búsqueda automática de hiperparámetros** optimizada
-- ✅ **Reducción de dimensionalidad** con PCA para visualización
-- ✅ **Optimización de memoria** para datasets grandes
-- ✅ **Múltiples métricas de evaluación** cuando es posible
-- ✅ **Visualizaciones 3D** distinguiendo anomalías de normales
-- ✅ **Scores de anomalía calibrados** correctamente orientados
-
-### 🛠️ Correcciones Implementadas
-- **🔒 Carga 100% No-Supervisada**: Implementado patrón blindado con `usecols=['acceleration_x','acceleration_y','acceleration_z','fecha']`
-- **🔴 Score Invertido Corregido**: Ahora usa `-decision_function()` (mayor = más anómalo)
-- **📊 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier` con fecha incluida
-- **📈 Orientación Consistente**: Score unificado compatible con sistema de comparación
-- **🎯 Mejores Parámetros**: Búsqueda optimizada de hiperparámetros
-- **🛡️ Sin Dependencias Supervisadas**: Eliminadas todas las referencias a etiquetas externas
-
-## 📊 Datos de Entrada
-
-### 📄 Archivo Requerido
-- **Nombre**: `data.csv`
-- **Ubicación**: Misma carpeta que el script
-- **Formato**: CSV con headers
-
-### 📝 Columnas Requeridas (100% No-Supervisado)
-```csv
-fecha,acceleration_x,acceleration_y,acceleration_z
-2024-01-15 10:30:00,1.2,0.8,9.8
-2024-01-15 10:30:01,1.1,0.9,9.9
-2024-01-15 10:30:02,2.5,1.5,8.2
+```
+Isolation Forest/
+├── Isolation Forest.py                # Script principal
+├── data.csv                           # Dataset de entrada
+├── README.md                          # Este archivo
+│
+├── graficas_IForest/                  # Gráficas generadas
+│   ├── anomaly_scores.png            # Distribución de scores de anomalía
+│   └── anomalies_3d.png              # Visualización 3D de anomalías
+│
+├── metricas_IForest/                  # Métricas y resultados
+│   ├── output.log                    # Log de ejecución completo
+│   ├── metrics.txt                   # Métricas en formato texto
+│   ├── metrics.csv                   # Métricas estandarizadas (para comparación)
+│   ├── anomaly_scores.csv            # Scores de todos los puntos
+│   └── anomalies.csv                 # Solo anomalías detectadas
+│
+└── modelos_entrenados_IForest/       # Modelos guardados
+    ├── isolation_forest_model.pkl    # Modelo en formato Pickle
+    ├── isolation_forest_model.h5     # Modelo en formato HDF5
+    └── scaler.pkl                    # Escalador para inferencia
 ```
 
-⚠️ **Importante**: El script **solo carga estas 4 columnas** usando `usecols`. Cualquier otra columna en el CSV (como 'severity', 'label', etc.) será **ignorada completamente**, garantizando operación 100% no-supervisada.
+## 🚀 Uso
 
-### 🧮 Características Generadas
-El código automáticamente calcula:
-- **Magnitud de aceleración**: `√(x² + y² + z²)`
-- **Características finales**: [x, y, z, magnitud]
-- **Reducción PCA**: 3 componentes principales para visualización
+### Requisitos
 
-## 🚀 Cómo Ejecutar
-
-### 📋 Requisitos
 ```bash
-pip install numpy pandas scikit-learn matplotlib joblib h5py pathlib
+pip install numpy pandas matplotlib scikit-learn joblib h5py
 ```
 
-### ⚡ Ejecución
+**Nota**: Isolation Forest está incluido en scikit-learn, no requiere librerías adicionales.
+
+### Ejecución
+
 ```bash
-# Desde la carpeta del algoritmo
-cd "2. Detección de Anomalías/Isolation Forest"
 python "Isolation Forest.py"
 ```
 
-### 🔧 Parámetros de Búsqueda
-```python
-# Grilla de parámetros (en el código)
-PARAMETROS_BUSQUEDA = {
-    'n_estimators': [100, 150],           # Número de árboles
-    'max_samples': ['auto', 0.8],         # Fracción de muestras por árbol
-    'contamination': [0.05, 0.1],         # Fracción esperada de anomalías
-    'max_features': [1.0]                 # Fracción de características por árbol
-}
-```
+El script ejecutará automáticamente:
+1. ✅ Carga y preprocesamiento de datos
+2. ✅ Reducción de dimensionalidad con PCA
+3. ✅ Optimización automática de parámetros
+4. ✅ Entrenamiento del modelo
+5. ✅ Detección de anomalías
+6. ✅ Generación de visualizaciones
+7. ✅ Cálculo y guardado de métricas
 
-## 📂 Estructura del Código
+## 📊 Métricas Generadas
 
-### 🏗️ Arquitectura Funcional
+### Métricas de Optimización
+- **Separación de Scores (P95-P50)**: Qué tan bien se distinguen anomalías de normales (mayor es mejor)
+- **Desviación estándar de scores**: Variabilidad en las puntuaciones
+- **Media de scores**: Score promedio de todos los puntos
 
-#### 📁 Funciones Principales
+### Métricas de Detección
+- **Número de anomalías detectadas**: Cantidad absoluta de anomalías
+- **Porcentaje de anomalías**: % del total de datos
+- **Media de puntuaciones de anomalía**: Score promedio
 
-| Función | Propósito | Descripción |
-|---------|-----------|-------------|
-| `cargar_datos()` | 📄 Carga | Lee y valida CSV con manejo de encoding |
-| `preprocesar_datos()` | 🔧 Limpieza | Elimina NaN, crea magnitud, selecciona características |
-| `escalar_datos()` | 📏 Normalización | StandardScaler para normalizar |
-| `reducir_dimensionalidad()` | 📊 PCA | 3 componentes principales para visualización |
-| `buscar_mejores_parametros()` | 🎯 Optimización | Búsqueda en grilla paralela |
-| `evaluar_modelo_isolation_forest()` | 📊 Evaluación | Entrena y evalúa modelo con parámetros específicos |
-| `generar_graficos()` | 📈 Visualización | Histograma de scores y gráfico 3D |
-| `guardar_modelo()` | 💾 Persistencia | Pickle y HDF5 |
+### Estadísticas de Scores
+- Score mínimo, máximo y desviación estándar
 
-#### 🔄 Flujo de Ejecución
-```mermaid
-graph TD
-    A[Cargar data.csv] --> B[Preprocesar datos]
-    B --> C[Escalar características]
-    C --> D[Reducir dimensionalidad PCA]
-    D --> E[Reducir muestra para optimización]
-    E --> F[Búsqueda en grilla paralela]
-    F --> G[Aplicar mejores parámetros al dataset completo]
-    G --> H[Calcular scores finales]
-    H --> I[Generar visualizaciones]
-    I --> J[Guardar modelo y resultados]
-```
+## 📈 Visualizaciones
 
-### 🎯 Búsqueda de Hiperparámetros
+### 1. Distribución de Scores (`anomaly_scores.png`)
+- Histograma de scores de anomalía
+- Permite ver la separación entre normales y anomalías
+- Mayor score = mayor probabilidad de anomalía
 
-#### 📊 Estrategia de Optimización
-1. **Muestra reducida**: Hasta 50k puntos para eficiencia
-2. **Búsqueda paralela**: Evaluar múltiples combinaciones
-3. **Selección por score**: Mejor puntuación promedio
-4. **Aplicación completa**: Mejores parámetros al dataset completo
+### 2. Visualización 3D (`anomalies_3d.png`)
+- Puntos normales en azul
+- Anomalías en rojo
+- Basada en las 3 componentes principales de PCA
+- Facilita la interpretación visual
 
-#### 🔍 Criterios de Evaluación
-- **Score promedio**: Media de puntuaciones de anomalía
-- **Métricas de clustering**: Si hay múltiples clases detectadas
-- **Distribución de anomalías**: Porcentaje detectado vs esperado
+## 🔧 Parámetros del Algoritmo
 
-## 📁 Archivos Generados
+El script optimiza automáticamente mediante grid search:
 
-### 📊 Métricas y Resultados
-```
-metricas_IForest/
-├── metrics.txt           # Métricas en formato texto
-├── anomalies.csv         # ✅ Solo anomalías detectadas
-└── output.log            # Log detallado de ejecución
-```
+- **n_estimators**: Número de árboles en el ensemble (100, 150)
+- **max_samples**: Muestras para entrenar cada árbol ('auto', 0.8)
+- **contamination**: Proporción esperada de anomalías (0.05, 0.1)
+- **max_features**: Características para cada split (1.0)
 
-### 📈 Visualizaciones
-```
-graficas_IForest/
-├── anomaly_scores.png    # Histograma de distribución de scores
-└── anomalies_3d.png      # Visualización 3D con PCA
-```
+El algoritmo selecciona la mejor combinación basándose en la **separación de scores**.
 
-### 🤖 Modelos Entrenados
-```
-modelos_entrenados_IForest/
-├── isolation_forest_model.pkl    # Modelo completo en pickle
-└── isolation_forest_model.h5     # Scores y metadatos en HDF5
-```
+## 📄 Archivos de Salida
 
-## 📊 Formato de Outputs
+### `metrics.csv` (Para Comparación)
+Formato estandarizado con columnas:
+- algoritmo, params_json, n_clusters (None), silhouette_score (None), calinski_harabasz_score (None), davies_bouldin_score (None), pct_anomalias, p95_minus_p50, mean_score
 
-### 🚨 anomalies.csv (Principal)
-```csv
-fecha,acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier
-2024-01-15 10:30:00,2.5,1.5,8.2,8.59,0.856,1
-2024-01-15 11:45:30,3.1,2.2,7.8,8.94,0.723,1
-2024-01-15 14:20:15,1.8,1.9,8.9,9.32,0.645,1
-```
+### `anomaly_scores.csv`
+Todos los puntos con:
+- fecha, acceleration_x, acceleration_y, acceleration_z, is_outlier, anomaly_score
 
-🔒 **Garantía No-Supervisada**: Este archivo contiene **solo** datos de sensores (XYZ) + fecha + scores calculados. No hay referencias a etiquetas supervisadas.
+**is_outlier**: 0 = normal, 1 = anomalía
 
-### 📊 metrics.txt (Resultados)
-```
-Mejores parámetros: {'n_estimators': 150, 'max_samples': 0.8, 'contamination': 0.1, 'max_features': 1.0}
-Número de anomalías detectadas: 1247
-Porcentaje de anomalías detectadas: 9.8%
-Media de puntuaciones de anomalía: 0.1234
-Silhouette Score: 0.4567 (si aplicable)
-```
-
-### 💾 HDF5 Model (Datos del modelo)
-```python
-# Contenido del archivo .h5
-- decision_scores: Array con scores de anomalía
-- etiquetas: Array binario (0=normal, 1=anomalía)
-- atributos: n_estimators, max_samples, contamination, max_features
-```
-
-## 🎯 Interpretación de Resultados
-
-### 📊 Scores de Anomalía
-
-| Rango Score | Interpretación | Acción Recomendada |
-|-------------|---------------|-------------------|
-| **> P99** | Anomalía crítica | Parada inmediata |
-| **P95-P99** | Anomalía severa | Mantenimiento preventivo |
-| **P90-P95** | Anomalía moderada | Monitoreo aumentado |
-| **< P90** | Operación normal | Continuar operación |
-
-### 🎛️ Parámetros del Modelo
-
-| Parámetro | Efecto | Recomendación |
-|-----------|--------|---------------|
-| **n_estimators** | Más árboles = más estable | 100-200 para balance |
-| **max_samples** | Fracción de datos por árbol | 'auto' o 0.8 |
-| **contamination** | % esperado de anomalías | 0.05-0.1 típico |
-| **max_features** | Características por división | 1.0 (todas) |
-
-### 📈 Distribución Esperada
-- **Normal**: ~90-95% de los datos
-- **Anomalías**: ~5-10% de los datos
-- **Score medio**: Alrededor de 0.1-0.3
-- **Anomalías**: Scores > 0.5 típicamente
+### `anomalies.csv`
+Solo puntos clasificados como anomalías (`is_outlier = 1`)
 
 ## ⚙️ Configuración Avanzada
 
-### 🔧 Optimización de Performance
-```python
-# Para datasets grandes (>100k puntos)
-max_muestras_optimizacion = 20000    # Reducir muestra
-n_jobs_paralelo = 2                  # Limitar paralelismo
+Para modificar parámetros de búsqueda, edita en `Isolation Forest.py`:
 
-# Para mayor precisión
+```python
 PARAMETROS_BUSQUEDA = {
-    'n_estimators': [100, 150, 200],
-    'max_samples': ['auto', 0.7, 0.8, 0.9],
-    'contamination': [0.05, 0.08, 0.1, 0.12]
+    'n_estimators': [100, 150],      # Número de árboles
+    'max_samples': ['auto', 0.8],    # Muestras por árbol
+    'contamination': [0.05, 0.1],    # Tasa de contaminación esperada
+    'max_features': [1.0]            # Características por split
 }
 ```
 
-### 🎯 Ajuste de Contaminación
+Para datasets grandes:
+
 ```python
-# Conservador (menos falsos positivos)
-'contamination': [0.05]    # Detecta solo 5% como anomalías
-
-# Agresivo (más sensible)
-'contamination': [0.15]    # Detecta hasta 15% como anomalías
-
-# Adaptativo (estimar de los datos)
-contamination_estimada = np.percentile(scores, 95)
+MAX_MUESTRAS_OPTIMIZACION = 50000  # Límite para optimización
 ```
 
-### 📊 Control de Calidad
-```python
-# Validación de resultados
-porcentaje_anomalias = np.mean(etiquetas) * 100
-assert 3 <= porcentaje_anomalias <= 20, "Porcentaje anómalo"
+## 🔍 Interpretación de Resultados
+
+### Clasificación Binaria
+- **is_outlier = 0**: Punto normal (requiere muchas particiones para aislar)
+- **is_outlier = 1**: Anomalía detectada (se aísla rápidamente)
+
+### Anomaly Score
+- Basado en la profundidad promedio de aislamiento
+- Mayor score = más anómalo (se aísla con menos particiones)
+- Menor score = más normal (requiere más particiones)
+
+### Separación (P95-P50)
+- **Métrica crítica** para evaluar calidad de detección
+- Mayor valor = mejor distinción entre anomalías y normales
+- Indica confiabilidad del modelo
+
+## 📊 Comparación con Otros Algoritmos
+
+Para comparar Isolation Forest con CBLOF:
+
+```bash
+cd ../Comparaciones
+python comparar_algoritmos.py
 ```
 
-## 🚨 Casos de Uso y Limitaciones
+Esto generará:
+- Comparación visual lado a lado
+- Gráficos comparativos de métricas
+- Reporte detallado con análisis
+- Determinación del mejor algoritmo
 
-### ✅ Casos Ideales
-- **Detección global de anomalías**: No asume distribución específica
-- **Datos sin etiquetas**: Completamente no supervisado
-- **Datasets grandes**: Eficiente en tiempo y memoria
-- **Anomalías diversas**: Detecta múltiples tipos sin conocimiento previo
-- **Implementación rápida**: Pocos parámetros que ajustar
+## 🎓 Ventajas y Desventajas
 
-### ⚠️ Limitaciones
-- **Dimensiones muy altas**: Performance se degrada (>50 características)
-- **Datos uniformes**: Problemas si no hay estructura clara
-- **Anomalías contextuales**: No detecta anomalías que dependen del contexto temporal
-- **Interpretabilidad**: Difícil explicar por qué un punto es anómalo
+### ✅ Ventajas
+- **Muy rápido**: Entrenamiento e inferencia eficientes
+- **Escalable**: Funciona bien con millones de puntos
+- **Alta dimensionalidad**: No sufre la "maldición de la dimensionalidad"
+- **Sin clustering**: No necesita agrupar datos previamente
+- **Memoria eficiente**: Usa poco espacio de almacenamiento
+- **Paralelizable**: Fácil de distribuir
 
-### 🎯 Cuándo Usar Isolation Forest
-- ✅ Necesitas detección rápida y eficiente
-- ✅ No tienes conocimiento previo de tipos de anomalías
-- ✅ Los datos tienen estructura multidimensional
-- ✅ Quieres un algoritmo robusto y estable
-- ✅ El dataset es grande (>10k puntos)
+### ⚠️ Desventajas
+- **Menos interpretable**: Basado en profundidad de árboles (menos intuitivo)
+- **Sensible a contaminación**: Requiere estimar proporción de anomalías
+- **Anomalías locales**: Puede perder anomalías dentro de grupos densos
+- **No contextual**: No usa estructura local de datos
 
-## 🔗 Integración con Sistema Completo
+## 🔄 Comparación con CBLOF
 
-### 📊 Compatibilidad
-- **Outputs estandarizados** para `sistema_comparacion_algoritmos.py`
-- **Scores normalizados** para sistema de severidad unificado
-- **Detección binaria** clara (normal/anomalía)
+| Característica | Isolation Forest | CBLOF |
+|----------------|------------------|-------|
+| Necesita clusters | ❌ No | ✅ Sí |
+| Contexto local | ❌ No | ✅ Sí |
+| Velocidad | ⚡ Muy rápido | 🐌 Moderada |
+| Escalabilidad | ✅ Excelente | ⚠️ Limitada |
+| Interpretabilidad | ⚠️ Media | ✅ Alta |
+| Alta dimensionalidad | ✅ Excelente | ⚠️ Limitada |
 
-### 🔄 En Pipeline de PdM
-1. **Entrenamiento**: Aprender patrones normales de operación
-2. **Scoring en tiempo real**: Evaluar nuevas mediciones
-3. **Alertas por umbral**: P95, P99 para diferentes tipos de alerta
-4. **Reentrenamiento**: Mensual o cuando cambian condiciones
+## 🧮 Cómo Funciona Isolation Forest
 
-### 🎖️ Recomendación de Implementación
-**Isolation Forest es el algoritmo recomendado para Fase 1** por:
-- Fácil implementación y configuración
-- Excelente balance precisión/eficiencia
-- Resultados consistentes y estables
-- Mínimo tuning requerido
+1. **Construcción de árboles**:
+   - Selecciona aleatoriamente una característica
+   - Selecciona aleatoriamente un valor de split
+   - Particiona los datos recursivamente
 
-## 🛠️ Troubleshooting
+2. **Profundidad de aislamiento**:
+   - Anomalías requieren **menos particiones** (se aíslan rápido)
+   - Puntos normales requieren **más particiones** (están en regiones densas)
 
-### ❌ Errores Comunes
+3. **Score de anomalía**:
+   - Basado en la profundidad promedio en todos los árboles
+   - Normalizado para comparabilidad
 
-#### "Muy pocas/muchas anomalías detectadas"
-```python
-# Ajustar parámetro contamination
-# Si detecta muy pocas (< 2%)
-'contamination': 0.05  # Aumentar a 0.08-0.1
+4. **Detección**:
+   - Puntos con scores más altos son anomalías
 
-# Si detecta demasiadas (> 15%)
-'contamination': 0.03  # Reducir a 0.03-0.05
-```
+### Ejemplo Intuitivo
+Imagina buscar a una persona en una multitud vs. buscar a alguien solo en una esquina. La persona aislada (anomalía) se encuentra más rápido con menos preguntas.
 
-#### "Scores todos similares (poca separación)"
-```python
-# Aumentar número de árboles
-'n_estimators': 200  # En lugar de 100
+## 📚 Referencias
 
-# Probar diferentes max_samples
-'max_samples': 0.7   # Menor valor = más diversidad
-```
+- Liu, F.T., Ting, K.M., & Zhou, Z.H. (2008). "Isolation Forest"
+- Liu, F.T., Ting, K.M., & Zhou, Z.H. (2012). "Isolation-based Anomaly Detection"
+- Scikit-learn Documentation: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
 
-#### "MemoryError en datasets grandes"
-```python
-# Reducir tamaño de muestra para optimización
-max_muestras = 10000  # En lugar de 50000
+## 🤝 Contribución al Proyecto
 
-# Reducir número de árboles
-'n_estimators': [50, 100]  # En lugar de [100, 150]
-```
+Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de Isolation Forest se comparan directamente con CBLOF para determinar el mejor algoritmo de detección de anomalías para esta aplicación específica.
 
-#### "Decision function devuelve valores negativos"
-- **Ya corregido**: El código usa `-decision_function()` automáticamente
-- **Verificación**: `anomaly_score` debe ser positivo (mayor = más anómalo)
+## 🏆 Casos de Uso Ideales
 
-### 📊 Validación de Resultados
-```python
-# Verificar orientación de scores
-scores = modelo.decision_function(X)
-scores_corregidos = -scores  # Asegurar orientación correcta
-assert np.all(scores_corregidos >= 0), "Scores deben ser positivos"
-
-# Verificar distribución razonable
-anomalias_pct = np.mean(etiquetas == 1) * 100
-assert 2 <= anomalias_pct <= 20, f"Anomalías: {anomalias_pct:.1f}%"
-```
-
-## 🧠 Algoritmo Isolation Forest - Detalles Técnicos
-
-### 🌳 Cómo Funciona
-```python
-def isolation_tree(X, max_depth):
-    if len(X) <= 1 or max_depth == 0:
-        return leaf_node(size=len(X))
-    
-    # Elegir característica y valor de división aleatoriamente
-    feature = random.choice(range(X.shape[1]))
-    split_value = random.uniform(X[:, feature].min(), X[:, feature].max())
-    
-    # Dividir datos
-    left = X[X[:, feature] < split_value]
-    right = X[X[:, feature] >= split_value]
-    
-    return internal_node(
-        feature=feature,
-        split_value=split_value,
-        left=isolation_tree(left, max_depth-1),
-        right=isolation_tree(right, max_depth-1)
-    )
-```
-
-### ⚡ Ventajas Técnicas
-- **Complejidad Lineal**: O(n log n) para entrenamiento
-- **Memoria Eficiente**: O(n) espacio requerido
-- **Paralelizable**: Árboles se entrenan independientemente
-- **Escalable**: Maneja datasets de millones de puntos
-
-### 📊 Score de Anomalía Matemático
-```python
-# Longitud de camino promedio para punto x
-E(h(x)) = promedio_longitud_camino_en_todos_los_arboles(x)
-
-# Score de anomalía normalizado
-s(x,n) = 2^(-E(h(x))/c(n))
-
-# Donde c(n) es la longitud promedio de camino en BST de n puntos
-# Score ≈ 1: anomalía clara
-# Score ≈ 0.5: punto normal
-# Score ≈ 0: definitivamente normal
-```
-
-## 📚 Referencias y Recursos
-
-### 📖 Algoritmo Isolation Forest
-- **Paper Original**: Liu, F.T. et al. (2008). "Isolation Forest"
-- **Scikit-learn**: [Isolation Forest Documentation](https://scikit-learn.org/stable/modules/outlier_detection.html#isolation-forest)
-
-### 🔧 Aplicaciones en PdM
-- **Bearing Fault Detection**: Automated anomaly detection
-- **Pump Monitoring**: Early failure detection
-- **Motor Condition**: Vibration pattern analysis
-
-### 📊 Comparación con Otros Algoritmos
-- **vs One-Class SVM**: Más rápido, menos parámetros
-- **vs LOF**: Mejor para datasets grandes
-- **vs Autoencoder**: No requiere deep learning
+Isolation Forest es especialmente adecuado para:
+- ✅ Datasets muy grandes (millones de registros)
+- ✅ Alta dimensionalidad (muchas características)
+- ✅ Necesidad de detección rápida en tiempo real
+- ✅ Anomalías globales (no contextuales)
+- ✅ Recursos computacionales limitados
 
 ---
 
-## 🎯 Resumen Ejecutivo
-
-Este módulo Isolation Forest ofrece:
-- ✅ **Detección eficiente** de anomalías sin supervisión
-- ✅ **Implementación robusta** con optimización automática
-- ✅ **Scores calibrados** correctamente orientados
-- ✅ **Visualizaciones claras** para interpretación
-- ✅ **Integración perfecta** con sistema de comparación
-
-**Ideal para**: Detección rápida y eficiente de anomalías globales, implementación en producción, y como algoritmo principal en Fase 1.
-
-**Ventaja clave**: Balance óptimo entre simplicidad de implementación, eficiencia computacional, y efectividad en detección.
-
----
-
-*Desarrollado para mantenimiento predictivo con detección automática de anomalías*  
-*Versión corregida y optimizada - Recomendado para implementación inicial* ✅
+**Última actualización**: Octubre 2025  
+**Versión**: 2.0

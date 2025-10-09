@@ -1,390 +1,181 @@
-# 🎯 Algoritmo DBSCAN para Mantenimiento Predictivo
+# DBSCAN - Density-Based Spatial Clustering of Applications with Noise
 
-## 📋 Descripción General
+## 📋 Descripción
 
-Este módulo implementa el algoritmo **DBSCAN** (Density-Based Spatial Clustering of Applications with Noise) para clustering de datos de acelerómetro, diseñado específicamente para mantenimiento predictivo. El algoritmo identifica clusters de densidad variable y detecta automáticamente puntos de ruido (anomalías).
+DBSCAN es un algoritmo de clustering basado en densidad que agrupa puntos que están estrechamente empaquetados y marca como outliers los puntos que están solos en regiones de baja densidad.
 
-## 🔬 ¿Qué es DBSCAN?
+### Características Principales
+- ✅ Detecta clusters de forma arbitraria (no solo esféricos)
+- ✅ Identifica automáticamente outliers (puntos de ruido)
+- ✅ No requiere especificar el número de clusters a priori
+- ✅ Funciona bien con clusters de densidad variable
+- ⚠️ Sensible a la elección de parámetros (eps, min_samples)
 
-**DBSCAN** es un algoritmo de clustering basado en densidad que:
-- **No requiere especificar K** (número de clusters) de antemano
-- **Detecta automáticamente ruido** (puntos anómalos)
-- **Encuentra clusters de formas arbitrarias** (no solo circulares)
-- **Identifica regiones densas** separadas por regiones de baja densidad
+## 🎯 Objetivo
 
-### 🎯 Conceptos Clave
-- **Punto Núcleo**: Tiene al menos `min_samples` vecinos dentro de radio `eps`
-- **Punto Frontera**: No es núcleo pero está cerca de uno
-- **Ruido**: Puntos aislados que no pertenecen a ningún cluster
-- **Cluster**: Grupo de puntos núcleo conectados + sus fronteras
+Identificar grupos naturales en datos de acelerómetro para Mantenimiento Predictivo, detectando automáticamente patrones anómalos sin supervisión.
 
-### 🚨 Aplicación en PdM
-- **Operación Normal**: Clusters densos de condiciones típicas
-- **Anomalías**: Puntos de ruido (outliers automáticos)
-- **Condiciones Especiales**: Clusters pequeños de eventos específicos
-- **Detección Automática**: No necesita conocer tipos de fallas de antemano
+## 📁 Estructura de Archivos
 
-## ⚙️ Características del Código
-
-### 🔧 Capacidades Principales
-- ✅ **Optimización automática de parámetros** (eps y min_samples)
-- ✅ **Gráfica K-distancias** para estimación de eps
-- ✅ **Búsqueda en grilla** paralela para mejores parámetros
-- ✅ **Métricas de calidad** excluyendo ruido correctamente
-- ✅ **Scores de anomalía** para todos los puntos (incluido ruido)
-- ✅ **Visualizaciones 2D y 3D** distinguiendo ruido de clusters
-- ✅ **Optimización de memoria** para datasets grandes
-
-### 🛠️ Correcciones Implementadas
-- **🔴 Score de Anomalía Agregado**: Ahora calcula distancia a puntos núcleo para todos los puntos
-- **📊 Outputs Estandarizados**: Genera `anomaly_score`, `is_outlier`, `cluster_id`
-- **📈 Métricas Correctas**: Excluye ruido apropiadamente en cálculos de silhouette
-- **💾 Archivos Estandarizados**: `scores_dbscan.csv` y `anomalies.csv` compatibles
-
-## 📊 Datos de Entrada
-
-### 📄 Archivo Requerido
-- **Nombre**: `data.csv`
-- **Ubicación**: Misma carpeta que el script
-- **Formato**: CSV con headers
-
-### 📝 Columnas Requeridas
-```csv
-acceleration_x,acceleration_y,acceleration_z
-1.2,0.8,9.8
-1.1,0.9,9.9
-2.5,1.5,8.2
+```
+DBSCAN/
+├── DBSCAN.py                          # Script principal
+├── data.csv                           # Dataset de entrada
+├── README.md                          # Este archivo
+│
+├── graficas_DBSCAN/                   # Gráficas generadas
+│   ├── clusters_2d_pca.png           # Visualización 2D con PCA
+│   ├── clusters_3d_pca.png           # Visualización 3D con PCA
+│   └── k_distance_graph.png          # Gráfica K-distancias (para estimación de eps)
+│
+├── metricas_DBSCAN/                   # Métricas y resultados
+│   ├── output.log                    # Log de ejecución completo
+│   ├── metrics.txt                   # Métricas en formato texto
+│   ├── metrics.csv                   # Métricas estandarizadas (para comparación)
+│   ├── anomaly_scores.csv            # Scores de todos los puntos
+│   └── anomalies.csv                 # Solo outliers detectados
+│
+└── modelos_entrenados_DBSCAN/        # Modelos guardados
+    ├── dbscan_model.pkl              # Modelo en formato Pickle
+    ├── dbscan_model.h5               # Modelo en formato HDF5
+    └── scaler.pkl                    # Escalador para inferencia
 ```
 
-### 🧮 Características Generadas
-El código automáticamente calcula:
-- **Magnitud de aceleración**: `√(x² + y² + z²)`
-- **Características finales**: [x, y, z, magnitud]
+## 🚀 Uso
 
-## 🚀 Cómo Ejecutar
+### Requisitos
 
-### 📋 Requisitos
 ```bash
-pip install numpy pandas scikit-learn matplotlib joblib h5py
+pip install numpy pandas matplotlib scikit-learn joblib h5py
 ```
 
-### ⚡ Ejecución
+### Ejecución
+
 ```bash
-# Desde la carpeta del algoritmo
-cd "1. Clustering/DBSCAN"
 python DBSCAN.py
 ```
 
-### 🔧 Parámetros Principales
-```python
-# Búsqueda de parámetros (en el código)
-PARAM_GRID = {
-    'eps': [0.1, 0.3, 0.5, 0.8, 1.0, 1.5, 2.0],      # Radio de vecindad
-    'min_samples': [3, 4]                               # Mín. puntos para cluster
-}
+El script ejecutará automáticamente:
+1. ✅ Carga y preprocesamiento de datos
+2. ✅ Optimización automática de parámetros (eps, min_samples)
+3. ✅ Entrenamiento del modelo
+4. ✅ Generación de visualizaciones
+5. ✅ Cálculo de métricas de calidad
+6. ✅ Detección y guardado de anomalías
 
-# Optimización de memoria
-MAX_MUESTRAS_OPTIMIZACION = 10000  # Reducir para datasets grandes
-N_JOBS_PARALELO = 1                 # Procesos paralelos
-```
+## 📊 Métricas Generadas
 
-## 📂 Estructura del Código
+### Métricas de Clustering
+- **Silhouette Score**: Mide qué tan bien están separados los clusters (0-1, mayor es mejor)
+- **Calinski-Harabasz Score**: Ratio de dispersión entre/dentro de clusters (mayor es mejor)
+- **Davies-Bouldin Index**: Similitud promedio entre clusters (menor es mejor)
 
-### 🏗️ Arquitectura Modular
+### Métricas de Detección de Anomalías
+- **Porcentaje de Anomalías**: Porcentaje de puntos clasificados como ruido
+- **Separación de Scores (P95-P50)**: Qué tan bien se distinguen anomalías de normales
 
-#### 📁 Clases Principales
+## 📈 Visualizaciones
 
-| Clase | Propósito | Responsabilidad |
-|-------|-----------|-----------------|
-| `GestorDirectorios` | 📁 Organización | Crear y gestionar directorios de salida |
-| `ProcesadorDatos` | 📄 Preprocesamiento | Cargar, limpiar y escalar datos |
-| `AnalizadorDistancias` | 📊 Análisis | Generar gráfica K-distancias |
-| `OptimizadorDBSCAN` | 🎯 Optimización | Búsqueda de mejores parámetros |
-| `DetectorAnomalias` | 🚨 Detección | Calcular scores y identificar anomalías |
-| `VisualizadorClusters` | 📈 Visualización | Crear gráficos 2D y 3D |
-| `GuardadorModelos` | 💾 Persistencia | Guardar modelos y resultados |
+### 1. Gráfica de K-Distancias (`k_distance_graph.png`)
+- Ayuda a estimar el parámetro `eps` óptimo
+- El "codo" en la gráfica sugiere un buen valor de eps
 
-#### 🔄 Flujo de Ejecución
-```mermaid
-graph TD
-    A[Cargar y validar data.csv] --> B[Preprocesar datos]
-    B --> C[Escalar características]
-    C --> D[Generar gráfica K-distancias]
-    D --> E[Reducir muestra para optimización]
-    E --> F[Búsqueda en grilla de parámetros]
-    F --> G[Aplicar mejores parámetros al dataset completo]
-    G --> H[Calcular scores de anomalía]
-    H --> I[Crear visualizaciones]
-    I --> J[Guardar resultados]
-```
+### 2. Clusters 2D con PCA (`clusters_2d_pca.png`)
+- Visualización de clusters en 2 dimensiones
+- Puntos de ruido mostrados en negro (x)
+- Cada cluster con color diferente
 
-### 🎯 Optimización de Parámetros
+### 3. Clusters 3D con PCA (`clusters_3d_pca.png`)
+- Visualización tridimensional de clusters
+- Permite ver mejor la separación entre grupos
 
-#### 📊 Estimación de eps
-1. **K-distance graph**: Distancia al k-ésimo vecino más cercano
-2. **Método del codo**: Buscar cambio abrupto en la curva
-3. **Grilla de búsqueda**: Evaluar múltiples valores alrededor del estimado
+## 🔧 Parámetros del Algoritmo
 
-#### 🔍 Selección de min_samples
-- **Regla general**: `min_samples = dimensiones + 1`
-- **Para 4 dimensiones**: min_samples = 3-5
-- **Evaluación**: Silhouette score excluyendo ruido
+El script optimiza automáticamente:
 
-## 📁 Archivos Generados
+- **eps**: Radio de vecindad (distancia máxima entre puntos en el mismo cluster)
+- **min_samples**: Número mínimo de puntos para formar un cluster denso
 
-### 📊 Métricas y Resultados
-```
-metricas_DBSCAN/
-├── metrics.txt              # Métricas en formato texto
-├── scores_dbscan.csv        # ✅ Todos los datos con scores y clusters
-├── anomalies.csv            # ✅ Solo anomalías detectadas (ruido)
-└── output.log               # Log detallado de ejecución
-```
+El algoritmo usa búsqueda en grid para encontrar los mejores parámetros basándose en el Silhouette Score.
 
-### 📈 Visualizaciones
-```
-graficas_DBSCAN/
-├── k_distance_graph.png     # Gráfica K-distancias para estimar eps
-├── clusters_2d_pca.png      # Clusters en 2D (PCA) con ruido en negro
-└── clusters_3d_pca.png      # Clusters en 3D (PCA) con ruido marcado
-```
+## 📄 Archivos de Salida
 
-### 🤖 Modelos Entrenados
-```
-modelos_entrenados_DBSCAN/
-├── dbscan_model.pkl         # Modelo en formato pickle
-└── dbscan_model.h5          # Datos del modelo en HDF5
-```
+### `metrics.csv` (Para Comparación)
+Formato estandarizado con columnas:
+- algoritmo, params_json, n_clusters, silhouette_score, calinski_harabasz_score, davies_bouldin_score, pct_anomalias, p95_minus_p50, mean_score
 
-## 📊 Formato de Outputs
+### `anomaly_scores.csv`
+Todos los puntos con:
+- fecha, acceleration_x, acceleration_y, acceleration_z, anomaly_score, is_outlier, cluster_id
 
-### 📄 scores_dbscan.csv (Principal)
-```csv
-acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
-1.2,0.8,9.8,9.85,0.0,0,0
-1.1,0.9,9.9,9.92,0.0,0,0
-2.5,1.5,8.2,8.59,1.456,1,-1
-```
-
-### 🚨 anomalies.csv (Solo Anomalías)
-```csv
-acceleration_x,acceleration_y,acceleration_z,magnitud_aceleracion,anomaly_score,is_outlier,cluster_id
-2.5,1.5,8.2,8.59,1.456,1,-1
-3.1,2.2,7.8,8.94,1.789,1,-1
-```
-
-### 📊 metrics.txt (Resultados)
-```
-=== MEJORES RESULTADOS ===
-Parámetros óptimos: eps=0.500, min_samples=4
-Clusters encontrados: 3
-Puntos de ruido: 23
-Coeficiente Silhouette: 0.7234
-Calinski-Harabasz: 1456.78
-Davies-Bouldin: 0.892
-```
-
-## 🎯 Interpretación de Resultados
-
-### 📊 Parámetros Finales
-
-| Parámetro | Significado | Interpretación |
-|-----------|-------------|----------------|
-| **eps** | Radio de vecindad | Distancia máxima para considerar vecinos |
-| **min_samples** | Mínimo puntos por cluster | Densidad mínima requerida |
-| **n_clusters** | Clusters encontrados | Modos operativos identificados |
-| **n_ruido** | Puntos de ruido | Anomalías detectadas automáticamente |
-
-### 🚨 Scores de Anomalía
-- **Puntos núcleo**: `anomaly_score = 0.0` (más normales)
-- **Puntos frontera**: `anomaly_score` = distancia a núcleo más cercano
-- **Ruido**: `anomaly_score` = distancia a núcleo más cercano (alta)
-
-### 🎨 Identificación de Clusters
-- **cluster_id ≥ 0**: Pertenece a cluster específico
-- **cluster_id = -1**: Ruido (anomalía automática)
-- **is_outlier = 1**: Punto clasificado como anomalía
+### `anomalies.csv`
+Solo puntos detectados como outliers (is_outlier = 1)
 
 ## ⚙️ Configuración Avanzada
 
-### 🔧 Optimización de Memoria
-```python
-# Para datasets grandes (>100k puntos)
-MAX_MUESTRAS_OPTIMIZACION = 5000   # Reducir muestra para optimización
-N_JOBS_PARALELO = 1                 # Usar 1 proceso para evitar memoria
+Para modificar parámetros, edita las constantes en `DBSCAN.py`:
 
-# Para sistemas con más recursos
-MAX_MUESTRAS_OPTIMIZACION = 20000  # Aumentar para mejor optimización
-N_JOBS_PARALELO = 4                 # Usar más procesos
+```python
+# Rango de búsqueda para eps
+eps_min = 0.1
+eps_max = 2.0
+n_eps = 8
+
+# Rango de búsqueda para min_samples
+min_samples_min = 3
+min_samples_max = 4
 ```
 
-### 🎯 Ajuste de Grilla de Búsqueda
-```python
-# Búsqueda más amplia (más tiempo, mejores resultados)
-PARAM_GRID = {
-    'eps': np.linspace(0.1, 3.0, 20),     # 20 valores de eps
-    'min_samples': [3, 4, 5, 6, 7]        # Más opciones min_samples
-}
+## 🔍 Interpretación de Resultados
 
-# Búsqueda rápida (menos tiempo, resultados básicos)
-PARAM_GRID = {
-    'eps': [0.3, 0.5, 0.8],               # Solo 3 valores
-    'min_samples': [3, 4]                  # Solo 2 opciones
-}
+### Clusters Válidos
+- El algoritmo identifica automáticamente el número de clusters
+- Cada punto pertenece a un cluster o es ruido (-1)
+
+### Outliers/Anomalías
+- Puntos con `is_outlier = 1` son anomalías detectadas
+- `anomaly_score` indica qué tan anómalo es el punto (mayor = más anómalo)
+- Útil para mantenimiento predictivo: estos puntos pueden indicar fallos inminentes
+
+## 📊 Comparación con Otros Algoritmos
+
+Para comparar DBSCAN con K-Means:
+
+```bash
+cd ../Comparaciones
+python comparar_algoritmos.py
 ```
 
-### 📊 Control de Calidad
-```python
-MIN_CLUSTERS_VALIDOS = 2    # Mínimo clusters para considerar válido
-```
+Esto generará:
+- Comparación visual lado a lado
+- Gráficos comparativos de métricas
+- Reporte detallado con análisis
+- Determinación del mejor algoritmo
 
-## 🚨 Casos de Uso y Limitaciones
+## 🎓 Ventajas y Desventajas
 
-### ✅ Casos Ideales
-- **Detección automática de anomalías**: No requiere conocer tipos de fallas
-- **Clusters de formas irregulares**: Mejor que K-Means para formas complejas
-- **Datos con ruido**: Maneja automáticamente puntos atípicos
-- **Número desconocido de condiciones**: No necesita especificar K
+### ✅ Ventajas
+- Detecta clusters de cualquier forma (no solo círculos/esferas)
+- No necesita saber cuántos clusters hay de antemano
+- Identifica outliers automáticamente
+- Robusto a ruido en los datos
 
-### ⚠️ Limitaciones
-- **Sensible a parámetros**: eps y min_samples afectan mucho los resultados
-- **Densidad variable**: Problemas si clusters tienen densidades muy diferentes
-- **Dimensiones altas**: Performance se degrada con muchas características
-- **Interpretación de parámetros**: eps depende de la escala de los datos
+### ⚠️ Desventajas
+- Sensible a la elección de eps y min_samples
+- Puede tener problemas con clusters de densidad muy diferente
+- Computacionalmente más costoso que K-Means
+- Rendimiento puede degradarse en alta dimensionalidad
 
-### 🎯 Cuándo Usar DBSCAN
-- ✅ No sabes cuántos tipos de condiciones operativas existen
-- ✅ Quieres detección automática de anomalías
-- ✅ Los clusters pueden tener formas irregulares
-- ✅ Hay presencia de ruido/outliers en los datos
-- ✅ Necesitas identificar regiones de operación densa vs esparcida
+## 📚 Referencias
 
-## 🔗 Integración con Sistema Completo
+- Ester, M., Kriegel, H.P., Sander, J., & Xu, X. (1996). "A density-based algorithm for discovering clusters in large spatial databases with noise"
+- Scikit-learn Documentation: https://scikit-learn.org/stable/modules/clustering.html#dbscan
 
-### 📊 Compatibilidad
-- **Outputs estandarizados** para `sistema_comparacion_algoritmos.py`
-- **Scores normalizados** para sistema de severidad unificado
-- **Detección binaria** de anomalías automática
+## 🤝 Contribución al Proyecto
 
-### 🔄 En Pipeline de PdM
-1. **Entrenamiento**: Identificar regiones de operación normal (clusters)
-2. **Detección en tiempo real**: Nuevos puntos clasificados como cluster o ruido
-3. **Alertas automáticas**: Puntos de ruido = anomalías inmediatas
-4. **Monitoreo de deriva**: Cambios en distribución de clusters
-
-## 🛠️ Troubleshooting
-
-### ❌ Errores Comunes
-
-#### "No se encontraron parámetros que generen clusters válidos"
-```python
-# Solución 1: Ampliar rango de búsqueda
-eps_min = 0.05    # Reducir mínimo
-eps_max = 5.0     # Aumentar máximo
-
-# Solución 2: Reducir MIN_CLUSTERS_VALIDOS
-MIN_CLUSTERS_VALIDOS = 1
-```
-
-#### "Todos los puntos clasificados como ruido"
-- **Causa**: eps muy pequeño
-- **Solución**: Revisar gráfica K-distancias, aumentar eps
-
-#### "Un solo cluster gigante"
-- **Causa**: eps muy grande
-- **Solución**: Reducir eps, revisar distribución de datos
-
-#### "MemoryError durante optimización"
-```python
-# Reducir tamaño de muestra
-MAX_MUESTRAS_OPTIMIZACION = 5000
-N_JOBS_PARALELO = 1
-```
-
-### 📊 Validación de Resultados
-```python
-# Verificar que hay clusters válidos
-assert metricas['n_clusters'] >= 2, "Muy pocos clusters"
-assert metricas['n_ruido'] < len(datos) * 0.5, "Demasiado ruido"
-
-# Verificar archivos generados
-import os
-assert os.path.exists('metricas_DBSCAN/scores_dbscan.csv')
-assert os.path.exists('graficas_DBSCAN/k_distance_graph.png')
-```
-
-### 🔍 Interpretación de K-distance
-```python
-# En la gráfica K-distancias buscar:
-# 1. Codo pronunciado = buen valor de eps
-# 2. Pendiente gradual = rango de eps válido
-# 3. Salto abrupto = límite entre cluster y ruido
-```
-
-## 🧠 Algoritmo DBSCAN - Detalles Técnicos
-
-### 🔬 Pseudocódigo Simplificado
-```python
-def dbscan(datos, eps, min_samples):
-    for cada_punto in datos:
-        if punto.visitado:
-            continue
-        
-        vecinos = encontrar_vecinos(punto, eps)
-        
-        if len(vecinos) < min_samples:
-            marcar_como_ruido(punto)
-        else:
-            crear_cluster(punto, vecinos, eps, min_samples)
-```
-
-### ⚡ Complejidad
-- **Tiempo**: O(n²) en el peor caso, O(n log n) con índices espaciales
-- **Espacio**: O(n) para almacenar clusters y visitados
-- **Escalabilidad**: Buena para datasets medianos (<100k puntos)
-
-### 🎯 Ventajas vs K-Means
-
-| Aspecto | DBSCAN | K-Means |
-|---------|--------|---------|
-| **Número de clusters** | Automático | Manual (K) |
-| **Formas de clusters** | Arbitrarias | Esféricas |
-| **Detección de ruido** | Automática | No |
-| **Interpretabilidad** | Media | Alta |
-| **Velocidad** | Media | Rápida |
-
-## 📚 Referencias y Recursos
-
-### 📖 Algoritmo DBSCAN
-- **Paper Original**: Ester, M. et al. (1996). "A density-based algorithm for discovering clusters"
-- **Scikit-learn**: [DBSCAN Documentation](https://scikit-learn.org/stable/modules/clustering.html#dbscan)
-
-### 📊 Métricas y Validación
-- **Silhouette**: Para evaluar calidad de clustering
-- **K-distance**: Para estimación de parámetro eps
-- **Adjusted Rand Index**: Para comparar particiones
-
-### 🔧 Aplicaciones en PdM
-- **Bearing Fault Detection**: Using vibration data clustering
-- **Anomaly Detection**: In industrial sensor networks
-- **Condition Monitoring**: Pattern recognition in mechanical systems
+Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de DBSCAN se comparan directamente con K-Means para determinar el mejor algoritmo de clustering para esta aplicación específica.
 
 ---
 
-## 🎯 Resumen Ejecutivo
-
-Este módulo DBSCAN ofrece:
-- ✅ **Detección automática** de clusters y anomalías
-- ✅ **Optimización inteligente** de parámetros críticos
-- ✅ **Manejo robusto** de ruido y outliers
-- ✅ **Scores de anomalía** para todos los puntos
-- ✅ **Visualizaciones claras** distinguiendo clusters de ruido
-
-**Ideal para**: Detección automática de anomalías, descubrimiento de patrones desconocidos, y manejo de datos con ruido natural.
-
-**Ventaja clave**: No requiere conocimiento previo del número de condiciones operativas, detecta automáticamente anomalías como ruido.
-
----
-
-*Desarrollado para mantenimiento predictivo con detección automática de anomalías*  
-*Versión corregida y optimizada - Lista para producción* ✅
+**Última actualización**: Octubre 2025  
+**Versión**: 2.0

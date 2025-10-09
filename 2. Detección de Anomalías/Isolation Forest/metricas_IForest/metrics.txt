@@ -1,4 +1,0 @@
-Mejores parámetros: {'contamination': 0.05, 'max_features': 1.0, 'max_samples': 'auto', 'n_estimators': 100}
-Número de anomalías detectadas: 25920
-Porcentaje de anomalías detectadas: 5.0000%
-Separación de scores (P95-P50): 0.0830
