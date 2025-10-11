@@ -290,22 +290,6 @@ Los algoritmos ganadores se pueden usar para:
 - Identificar **comportamientos anómalos** en tiempo real
 - Priorizar **mantenimientos** basados en scores de anomalía
 
-## 📄 Licencia
-
-[Especificar licencia del proyecto]
-
-## 👥 Autores
-
-[Tus datos]
-
-## 📅 Última Actualización
-
-Octubre 2025 - **Versión 3.0 - Optimizada**
-- ✅ Optimizaciones de rendimiento para datasets grandes (500k+ registros)
-- ✅ Gráficas 3D corregidas con proporciones adecuadas  
-- ✅ Muestreo estratégico inteligente
-- ✅ Documentación consolidada y actualizada
-
 ---
 
 ## 🚀 Inicio Rápido
