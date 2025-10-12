@@ -1,4 +1,6 @@
-Iniciando proceso de clustering con K-Means...
+=== INICIANDO PROCESO DE CLUSTERING K-MEANS ===
+
+[PASO 1] Carga y validación de datos...
 Datos cargados correctamente desde: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\data.csv
 Forma del dataset: (518400, 4)
 Columnas cargadas: ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']
@@ -25,25 +27,38 @@ min         -4.182035        5.212644       -3.787344
 75%          1.834094       11.721862        0.847826
 max          3.997792       14.053226        2.504745
 Característica 'magnitud_aceleracion' añadida.
+
+[PASO 2-3] Preprocesamiento y normalización de datos...
 Datos normalizados al rango [0, 1] correctamente.
+
+[PASO 4] Optimización de hiperparámetros (K óptimo)...
 Dataset reducido para optimización: 518400 -> 5000 muestras
 Número óptimo de clusters seleccionado: K=2
+
+[PASO 5-6] Entrenamiento del modelo final y cálculo de métricas...
 Modelo K-Means entrenado con el número óptimo de clusters.
 Silhouette Score: 0.3086
 Calinski-Harabasz Score: 266441.7188
 Davies-Bouldin Score: 1.3107
 Inercia (SSE): 103831.48
+
+[PASO 7] Detección de anomalías basada en distancia...
 Puntuación de anomalías calculada y normalizada [0, 1].
 Outliers detectados: 25920 (5.00%) usando percentil 95
-Tiempo total de ejecucion: 9.79 segundos
+Tiempo total de ejecucion: 10.28 segundos
 Memoria maxima utilizada: 184.76 MB
+
+[PASO 8] Guardado de modelos y resultados...
 Métricas guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\metricas_KMeans\metrics.txt
 Scores guardados en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\metricas_KMeans\anomaly_scores.csv
 Métricas CSV guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\metricas_KMeans\metrics.csv
 Modelo guardado como pickle en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\modelos_entrenados_KMeans\kmeans_model.pkl
 Escalador guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\modelos_entrenados_KMeans\scaler.pkl
 Modelo guardado como h5 en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\modelos_entrenados_KMeans\kmeans_model.h5
+
+[PASO 9] Generación de visualizaciones...
 Dataset reducido para visualización: 518400 -> 3000 muestras
 Visualización de clusters 3D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\graficas_KMeans\clusters_3d_pca.png
 Visualización de anomalías 2D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\K-means\graficas_KMeans\anomalies_pca.png
-Proceso completado exitosamente.
+
+=== PROCESO COMPLETADO EXITOSAMENTE ===

@@ -22,6 +22,9 @@ h5py>=3.9.0,<4.0.0
 # Utilidades científicas
 scipy>=1.11.0,<2.0.0
 
+# Knee detection para optimización de hiperparámetros
+kneed>=0.8.0
+
 # Typing extensions (para compatibilidad con versiones antiguas de Python)
 typing-extensions>=4.5.0
 

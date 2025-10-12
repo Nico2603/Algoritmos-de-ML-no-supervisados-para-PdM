@@ -565,7 +565,21 @@ def guardar_metricas_csv(datos: pd.DataFrame, etiquetas: np.ndarray, scores: np.
 
 
 def main() -> None:
-    """Función principal del programa."""
+    """
+    ============================================================================
+    PIPELINE DE DETECCIÓN DE ANOMALÍAS ISOLATION FOREST - FLUJO COMPLETO
+    ============================================================================
+    PASO 1: Carga y validación de datos
+    PASO 2: Preprocesamiento y creación de características
+    PASO 3: Normalización de datos (MinMaxScaler)
+    PASO 4: Reducción dimensional con PCA
+    PASO 5: Optimización de hiperparámetros (grid search Isolation Forest)
+    PASO 6: Entrenamiento del modelo final con dataset completo
+    PASO 7: Cálculo de scores de anomalía y detección
+    PASO 8: Guardado de modelos, escaladores y resultados
+    PASO 9: Generación de visualizaciones (3D, distribución scores)
+    ============================================================================
+    """
     tiempo_inicio = time.time()
     tracemalloc.start()
     
@@ -575,17 +589,24 @@ def main() -> None:
         directorios.crear_directorios()
         
         logger = configurar_logging(directorios.directorio_metricas / ARCHIVO_LOG)
-        logger.info("Iniciando proceso de detección de anomalías con Isolation Forest...")
+        logger.info("=== INICIANDO PROCESO DE DETECCIÓN DE ANOMALÍAS CON ISOLATION FOREST ===")
         
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        # Usar archivo de datos centralizado en la raíz del proyecto
+        # ========================================================================
+        # PASO 1: CARGA Y VALIDACIÓN DE DATOS
+        # ========================================================================
+        logger.info("\n[PASO 1] Carga y validación de datos...")
         ruta_datos = directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
         datos = cargar_datos(ruta_datos)
         logger.info(f"Datos cargados: {len(datos)} registros")
         
         config.validar_datos_entrada(datos, CARACTERISTICAS_BASE)
         
+        # ========================================================================
+        # PASO 2+3: PREPROCESAMIENTO Y NORMALIZACIÓN
+        # ========================================================================
+        logger.info("\n[PASO 2-3] Preprocesamiento y normalización de datos...")
         X, caracteristicas = preprocesar_datos(datos)
         logger.info(f"Datos preprocesados: {X.shape}")
         logger.info(f"Características utilizadas: {caracteristicas}")
@@ -593,15 +614,26 @@ def main() -> None:
         X_escalado, escalador = escalar_datos(X)
         logger.info("Datos escalados correctamente")
         
+        # ========================================================================
+        # PASO 4: REDUCCIÓN DIMENSIONAL CON PCA
+        # ========================================================================
+        logger.info("\n[PASO 4] Aplicando PCA para reducción dimensional...")
         X_pca, pca = reducir_dimensionalidad(X_escalado)
         logger.info(f"Reducción de dimensionalidad completada: {X_pca.shape}")
         
         X_para_optimizacion, indices_muestra = reducir_muestra_para_optimizacion(X_escalado)
         
+        # ========================================================================
+        # PASO 5: OPTIMIZACIÓN DE HIPERPARÁMETROS
+        # ========================================================================
+        logger.info("\n[PASO 5] Optimización de hiperparámetros Isolation Forest...")
         mejor_resultado = buscar_mejores_parametros(X_para_optimizacion, logger)
         
+        # ========================================================================
+        # PASO 6: ENTRENAMIENTO DEL MODELO FINAL
+        # ========================================================================
+        logger.info("\n[PASO 6] Entrenamiento del modelo final con dataset completo...")
         _, mejores_params, _ = mejor_resultado
-        logger.info(f"Aplicando mejores parámetros al dataset completo...")
         
         modelo_final = IsolationForest(
             n_estimators=mejores_params['n_estimators'],
@@ -612,6 +644,10 @@ def main() -> None:
         )
         modelo_final.fit(X_escalado)
         
+        # ========================================================================
+        # PASO 7: CÁLCULO DE SCORES DE ANOMALÍA Y DETECCIÓN
+        # ========================================================================
+        logger.info("\n[PASO 7] Cálculo de scores de anomalía y detección...")
         scores_pred_raw = -modelo_final.decision_function(X_escalado)
         
         scores_pred = config.normalizar_scores_min_max(scores_pred_raw)
@@ -624,6 +660,10 @@ def main() -> None:
         
         logger.info(f"Detección completada: {n_anomalias} anomalías ({porcentaje_anomalias:.2f}%)")
         
+        # ========================================================================
+        # PASO 8: GUARDADO DE MODELOS Y RESULTADOS
+        # ========================================================================
+        logger.info("\n[PASO 8] Guardado de modelos, escaladores y resultados...")
         ruta_metricas = directorios.directorio_metricas / ARCHIVO_METRICAS
         guardar_metricas(ruta_metricas, mejor_resultado, n_anomalias, porcentaje_anomalias, scores_pred)
         logger.info(f"Métricas guardadas en {ruta_metricas}")
@@ -646,6 +686,10 @@ def main() -> None:
         logger.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logger.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
+        # ========================================================================
+        # PASO 9: GENERACIÓN DE VISUALIZACIONES
+        # ========================================================================
+        logger.info("\n[PASO 9] Generación de visualizaciones...")
         generar_graficos(scores_pred, X_pca, etiquetas_pred, directorios.directorio_graficas)
         logger.info("Gráficos generados y guardados")
         
@@ -658,7 +702,7 @@ def main() -> None:
                             tiempo_total, memoria_max)
         logger.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         
-        logger.info("Proceso completado exitosamente")
+        logger.info("\n=== PROCESO COMPLETADO EXITOSAMENTE ===")
         
     except Exception as e:
         tracemalloc.stop()

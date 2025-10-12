@@ -1,14 +1,14 @@
 === RESULTADOS CLUSTERING DBSCAN ===
 
 Mejores parámetros:
-  - eps: 0.01
-  - min_samples: 3
+  - eps: 0.06199236485837512
+  - min_samples: 8
 
 Resultados del clustering:
-  - Número de clusters: 30034
-  - Número de puntos de ruido: 151432
+  - Número de clusters: 1
+  - Número de puntos de ruido: 0
 
 Métricas de calidad (sin ruido):
-  - Coeficiente Silhouette: -0.3210
-  - Calinski-Harabasz Score: 87.7703
-  - Davies-Bouldin Index: 0.8273
+  - Coeficiente Silhouette: -1.0000
+  - Calinski-Harabasz Score: 0.0000
+  - Davies-Bouldin Index: inf

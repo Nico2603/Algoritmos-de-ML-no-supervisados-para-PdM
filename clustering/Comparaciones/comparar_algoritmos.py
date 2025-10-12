@@ -145,48 +145,6 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     print(f"[OK] Comparación 3D guardada: {ruta_comparacion_3d.name}")
 
 
-def normalizar_metricas_clustering(metricas_dbscan: pd.DataFrame, 
-                                   metricas_kmeans: pd.DataFrame) -> Dict[str, Tuple[float, float]]:
-    """
-    Normaliza métricas al rango [0, 1] para visualización comparable.
-    Mayor valor normalizado = mejor rendimiento.
-    
-    Args:
-        metricas_dbscan: DataFrame con métricas de DBSCAN
-        metricas_kmeans: DataFrame con métricas de K-Means
-        
-    Returns:
-        Diccionario con tuplas (valor_dbscan_norm, valor_kmeans_norm) para cada métrica
-    """
-    # Silhouette: de [-1, 1] a [0, 1]
-    sil_dbscan_raw = metricas_dbscan['silhouette_score'].values[0] if not pd.isna(metricas_dbscan['silhouette_score'].values[0]) else 0
-    sil_kmeans_raw = metricas_kmeans['silhouette_score'].values[0] if not pd.isna(metricas_kmeans['silhouette_score'].values[0]) else 0
-    sil_dbscan = (sil_dbscan_raw + 1) / 2
-    sil_kmeans = (sil_kmeans_raw + 1) / 2
-    
-    # Calinski-Harabasz: normalización min-max
-    cal_dbscan_raw = metricas_dbscan['calinski_harabasz_score'].values[0] if not pd.isna(metricas_dbscan['calinski_harabasz_score'].values[0]) else 0
-    cal_kmeans_raw = metricas_kmeans['calinski_harabasz_score'].values[0] if not pd.isna(metricas_kmeans['calinski_harabasz_score'].values[0]) else 0
-    cal_min = min(cal_dbscan_raw, cal_kmeans_raw)
-    cal_max = max(cal_dbscan_raw, cal_kmeans_raw)
-    cal_dbscan_norm = (cal_dbscan_raw - cal_min) / (cal_max - cal_min) if cal_max != cal_min else 0.5
-    cal_kmeans_norm = (cal_kmeans_raw - cal_min) / (cal_max - cal_min) if cal_max != cal_min else 0.5
-    
-    # Davies-Bouldin: invertir (menor es mejor) y normalizar
-    dav_dbscan_raw = metricas_dbscan['davies_bouldin_score'].values[0] if not pd.isna(metricas_dbscan['davies_bouldin_score'].values[0]) else 1
-    dav_kmeans_raw = metricas_kmeans['davies_bouldin_score'].values[0] if not pd.isna(metricas_kmeans['davies_bouldin_score'].values[0]) else 1
-    dav_dbscan_inv = 1 / dav_dbscan_raw if dav_dbscan_raw > 0 else 0
-    dav_kmeans_inv = 1 / dav_kmeans_raw if dav_kmeans_raw > 0 else 0
-    dav_min = min(dav_dbscan_inv, dav_kmeans_inv)
-    dav_max = max(dav_dbscan_inv, dav_kmeans_inv)
-    dav_dbscan_norm = (dav_dbscan_inv - dav_min) / (dav_max - dav_min) if dav_max != dav_min else 0.5
-    dav_kmeans_norm = (dav_kmeans_inv - dav_min) / (dav_max - dav_min) if dav_max != dav_min else 0.5
-    
-    return {
-        'silhouette': (sil_dbscan, sil_kmeans),
-        'calinski': (cal_dbscan_norm, cal_kmeans_norm),
-        'davies': (dav_dbscan_norm, dav_kmeans_norm)
-    }
 
 
 def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame, 
@@ -243,54 +201,104 @@ def generar_graficos_metricas(metricas_dbscan: pd.DataFrame,
                               metricas_kmeans: pd.DataFrame) -> None:
     print("\nGenerando graficos comparativos de metricas...")
     
-    # Normalizar métricas para visualización comparable
-    metricas_norm = normalizar_metricas_clustering(metricas_dbscan, metricas_kmeans)
+    # Extraer valores reales de las métricas
+    sil_dbscan = obtener_metrica_segura(metricas_dbscan, 'silhouette_score', -999)
+    sil_kmeans = obtener_metrica_segura(metricas_kmeans, 'silhouette_score', -999)
     
-    metricas_nombres = ['Silhouette\n(Norm 0-1)', 'Calinski-Harabasz\n(Norm 0-1)', 'Davies-Bouldin\n(Norm Inv 0-1)']
+    cal_dbscan = obtener_metrica_segura(metricas_dbscan, 'calinski_harabasz_score', -999)
+    cal_kmeans = obtener_metrica_segura(metricas_kmeans, 'calinski_harabasz_score', -999)
     
-    dbscan_values = [
-        metricas_norm['silhouette'][0],
-        metricas_norm['calinski'][0],
-        metricas_norm['davies'][0]
-    ]
-    kmeans_values = [
-        metricas_norm['silhouette'][1],
-        metricas_norm['calinski'][1],
-        metricas_norm['davies'][1]
-    ]
+    dav_dbscan = obtener_metrica_segura(metricas_dbscan, 'davies_bouldin_score', -999)
+    dav_kmeans = obtener_metrica_segura(metricas_kmeans, 'davies_bouldin_score', -999)
     
-    x = np.arange(len(metricas_nombres))
-    width = 0.35
+    # Verificar número de clusters
+    n_clusters_dbscan = metricas_dbscan['n_clusters'].values[0] if not pd.isna(metricas_dbscan['n_clusters'].values[0]) else 0
+    n_clusters_kmeans = metricas_kmeans['n_clusters'].values[0] if not pd.isna(metricas_kmeans['n_clusters'].values[0]) else 0
     
-    fig, ax = plt.subplots(figsize=(14, 8))
-    rects1 = ax.bar(x - width/2, dbscan_values, width, label='DBSCAN', 
-                    color='steelblue', alpha=0.8, edgecolor='black', linewidth=1.5)
-    rects2 = ax.bar(x + width/2, kmeans_values, width, label='K-Means', 
-                    color='coral', alpha=0.8, edgecolor='black', linewidth=1.5)
+    # Detectar métricas N/A (cuando hay menos de 2 clusters)
+    dbscan_na = (sil_dbscan <= -900 or n_clusters_dbscan < 2)
+    kmeans_na = (sil_kmeans <= -900 or n_clusters_kmeans < 2)
     
-    ax.set_xlabel('Métricas de Clustering', fontsize=13, fontweight='bold')
-    ax.set_ylabel('Valor Normalizado [0-1]', fontsize=13, fontweight='bold')
-    ax.set_title('Comparación de Métricas de Calidad (Normalizadas 0-1): DBSCAN vs K-Means\nMayor valor = mejor rendimiento', 
-                fontsize=15, fontweight='bold', pad=15)
-    ax.set_xticks(x)
-    ax.set_xticklabels(metricas_nombres, fontsize=11)
-    ax.set_ylim(0, 1.0)
-    ax.legend(fontsize=12, loc='upper right')
-    ax.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    # Crear figura con 3 subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
     
-    def autolabel(rects):
-        for rect in rects:
-            height = rect.get_height()
-            ax.annotate(f'{height:.3f}',
-                       xy=(rect.get_x() + rect.get_width() / 2, height),
-                       xytext=(0, 3),
-                       textcoords="offset points",
-                       ha='center', va='bottom', fontsize=11, fontweight='bold')
+    algoritmos = ['DBSCAN', 'K-Means']
+    colores_base = ['steelblue', 'coral']
     
-    autolabel(rects1)
-    autolabel(rects2)
+    # Subplot 1: Silhouette Score (rango [-1, 1], mayor es mejor)
+    if not dbscan_na and not kmeans_na:
+        sil_values = [sil_dbscan, sil_kmeans]
+        bars1 = ax1.bar(algoritmos, sil_values, color=colores_base, alpha=0.8, edgecolor='black', linewidth=1.5)
+    elif dbscan_na and not kmeans_na:
+        bars1 = ax1.bar(['K-Means'], [sil_kmeans], color=['coral'], alpha=0.8, edgecolor='black', linewidth=1.5)
+        # Añadir barra rayada para N/A
+        ax1.bar(['DBSCAN'], [0], color='lightgray', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--', hatch='//')
+        ax1.text(0, -0.5, f'N/A\n({int(n_clusters_dbscan)} cluster)', ha='center', va='center', fontsize=10, fontweight='bold', color='red')
     
+    ax1.set_ylabel('Silhouette Score', fontsize=12, fontweight='bold')
+    ax1.set_title('Silhouette Score\n(Rango: -1 a 1, Mayor = Mejor)', fontsize=13, fontweight='bold', pad=12)
+    ax1.set_ylim(-1, 1)
+    ax1.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.5)
+    ax1.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    ax1.set_xticks(range(len(algoritmos)))
+    ax1.set_xticklabels(algoritmos)
+    
+    if not dbscan_na:
+        ax1.text(0, sil_dbscan, f'{sil_dbscan:.4f}', ha='center', va='bottom' if sil_dbscan > 0 else 'top', fontsize=11, fontweight='bold')
+    if not kmeans_na:
+        pos_x = 1 if not dbscan_na else 0
+        ax1.text(pos_x, sil_kmeans, f'{sil_kmeans:.4f}', ha='center', va='bottom' if sil_kmeans > 0 else 'top', fontsize=11, fontweight='bold')
+    
+    # Subplot 2: Calinski-Harabasz Score (mayor es mejor)
+    if not dbscan_na and not kmeans_na:
+        cal_values = [cal_dbscan, cal_kmeans]
+        bars2 = ax2.bar(algoritmos, cal_values, color=colores_base, alpha=0.8, edgecolor='black', linewidth=1.5)
+    elif dbscan_na and not kmeans_na:
+        bars2 = ax2.bar(['K-Means'], [cal_kmeans], color=['coral'], alpha=0.8, edgecolor='black', linewidth=1.5)
+        ax2.bar(['DBSCAN'], [cal_kmeans * 0.05], color='lightgray', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--', hatch='//')
+        ax2.text(0, cal_kmeans * 0.025, f'N/A\n({int(n_clusters_dbscan)} cluster)', ha='center', va='center', fontsize=10, fontweight='bold', color='red')
+    
+    ax2.set_ylabel('Calinski-Harabasz Score', fontsize=12, fontweight='bold')
+    ax2.set_title('Calinski-Harabasz Score\n(Mayor = Mejor)', fontsize=13, fontweight='bold', pad=12)
+    ax2.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    ax2.set_xticks(range(len(algoritmos)))
+    ax2.set_xticklabels(algoritmos)
+    
+    if not dbscan_na:
+        ax2.text(0, cal_dbscan, f'{cal_dbscan:.1f}', ha='center', va='bottom', fontsize=11, fontweight='bold')
+    if not kmeans_na:
+        pos_x = 1 if not dbscan_na else 0
+        ax2.text(pos_x, cal_kmeans, f'{cal_kmeans:.1f}', ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Subplot 3: Davies-Bouldin Index (menor es mejor)
+    if not dbscan_na and not kmeans_na:
+        dav_values = [dav_dbscan, dav_kmeans]
+        bars3 = ax3.bar(algoritmos, dav_values, color=colores_base, alpha=0.8, edgecolor='black', linewidth=1.5)
+    elif dbscan_na and not kmeans_na:
+        bars3 = ax3.bar(['K-Means'], [dav_kmeans], color=['coral'], alpha=0.8, edgecolor='black', linewidth=1.5)
+        ax3.bar(['DBSCAN'], [dav_kmeans * 0.5], color='lightgray', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--', hatch='//')
+        ax3.text(0, dav_kmeans * 0.25, f'N/A\n({int(n_clusters_dbscan)} cluster)', ha='center', va='center', fontsize=10, fontweight='bold', color='red')
+    
+    ax3.set_ylabel('Davies-Bouldin Index', fontsize=12, fontweight='bold')
+    ax3.set_title('Davies-Bouldin Index\n(Menor = Mejor)', fontsize=13, fontweight='bold', pad=12)
+    ax3.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    ax3.set_xticks(range(len(algoritmos)))
+    ax3.set_xticklabels(algoritmos)
+    
+    if not dbscan_na:
+        ax3.text(0, dav_dbscan, f'{dav_dbscan:.4f}', ha='center', va='bottom', fontsize=11, fontweight='bold')
+    if not kmeans_na:
+        pos_x = 1 if not dbscan_na else 0
+        ax3.text(pos_x, dav_kmeans, f'{dav_kmeans:.4f}', ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Título con nota explicativa si hay N/A
+    titulo = 'Comparación de Métricas de Clustering: DBSCAN vs K-Means\n(Valores Reales Sin Normalizar)'
+    if dbscan_na or kmeans_na:
+        titulo += '\n⚠ N/A indica que el algoritmo no pudo calcular métricas (< 2 clusters)'
+    
+    plt.suptitle(titulo, fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
+    
     ruta_grafico = DIRECTORIO_COMPARACIONES / 'comparacion_metricas_barras.png'
     plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
     plt.close("all")

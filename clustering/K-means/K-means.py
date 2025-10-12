@@ -455,7 +455,22 @@ class KMeansAnalyzer:
         logging.info(f"Visualización de clusters 3D guardada en {ruta_clusters_3d}")
     
     def ejecutar_analisis_completo(self) -> None:
-        logging.info("Iniciando proceso de clustering con K-Means...")
+        """
+        ============================================================================
+        PIPELINE DE CLUSTERING K-MEANS - FLUJO COMPLETO
+        ============================================================================
+        PASO 1: Carga y validación de datos
+        PASO 2: Preprocesamiento y creación de características
+        PASO 3: Normalización de datos (MinMaxScaler)
+        PASO 4: Optimización de hiperparámetros (Método del Codo + Silhouette)
+        PASO 5: Entrenamiento del modelo final con K óptimo
+        PASO 6: Cálculo de métricas de clustering (Silhouette, Calinski, Davies-Bouldin)
+        PASO 7: Detección de anomalías basada en distancia a centroides
+        PASO 8: Guardado de modelos, escaladores y resultados
+        PASO 9: Generación de visualizaciones (3D, anomalías)
+        ============================================================================
+        """
+        logging.info("=== INICIANDO PROCESO DE CLUSTERING K-MEANS ===")
         
         self.tiempo_inicio = time.time()
         tracemalloc.start()
@@ -463,15 +478,35 @@ class KMeansAnalyzer:
         try:
             config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
             
-            # Usar archivo de datos centralizado en la raíz del proyecto
+            # ====================================================================
+            # PASO 1: CARGA Y VALIDACIÓN DE DATOS
+            # ====================================================================
+            logging.info("\n[PASO 1] Carga y validación de datos...")
             ruta_datos = self.directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
             self.cargar_datos(ruta_datos)
+            
+            # ====================================================================
+            # PASO 2+3: PREPROCESAMIENTO Y NORMALIZACIÓN
+            # ====================================================================
+            logging.info("\n[PASO 2-3] Preprocesamiento y normalización de datos...")
             self.escalar_datos()
             
+            # ====================================================================
+            # PASO 4: OPTIMIZACIÓN DE HIPERPARÁMETROS
+            # ====================================================================
+            logging.info("\n[PASO 4] Optimización de hiperparámetros (K óptimo)...")
             k_optimo, metricas, resultados = self.encontrar_k_optimo()
             
+            # ====================================================================
+            # PASO 5+6: ENTRENAMIENTO Y MÉTRICAS
+            # ====================================================================
+            logging.info("\n[PASO 5-6] Entrenamiento del modelo final y cálculo de métricas...")
             self.entrenar_modelo_final(k_optimo, resultados)
             
+            # ====================================================================
+            # PASO 7: DETECCIÓN DE ANOMALÍAS
+            # ====================================================================
+            logging.info("\n[PASO 7] Detección de anomalías basada en distancia...")
             self.calcular_puntuaciones_anomalia()
             
             self.tiempo_total = time.time() - self.tiempo_inicio
@@ -482,11 +517,19 @@ class KMeansAnalyzer:
             logging.info(f"Tiempo total de ejecucion: {self.tiempo_total:.2f} segundos")
             logging.info(f"Memoria maxima utilizada: {self.memoria_max:.2f} MB")
             
+            # ====================================================================
+            # PASO 8: GUARDADO DE MODELOS Y RESULTADOS
+            # ====================================================================
+            logging.info("\n[PASO 8] Guardado de modelos y resultados...")
             self.guardar_resultados()
             
+            # ====================================================================
+            # PASO 9: GENERACIÓN DE VISUALIZACIONES
+            # ====================================================================
+            logging.info("\n[PASO 9] Generación de visualizaciones...")
             self.crear_visualizaciones()
             
-            logging.info("Proceso completado exitosamente.")
+            logging.info("\n=== PROCESO COMPLETADO EXITOSAMENTE ===")
             
         except Exception as e:
             tracemalloc.stop()

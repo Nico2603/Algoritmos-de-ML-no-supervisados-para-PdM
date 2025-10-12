@@ -1,9 +1,17 @@
-Iniciando proceso de detección de anomalías con Isolation Forest...
+=== INICIANDO PROCESO DE DETECCIÓN DE ANOMALÍAS CON ISOLATION FOREST ===
+
+[PASO 1] Carga y validación de datos...
 Datos cargados: 518400 registros
+
+[PASO 2-3] Preprocesamiento y normalización de datos...
 Datos preprocesados: (518400, 4)
 Características utilizadas: ['acceleration_x', 'acceleration_y', 'acceleration_z', 'magnitud_aceleracion']
 Datos escalados correctamente
+
+[PASO 4] Aplicando PCA para reducción dimensional...
 Reducción de dimensionalidad completada: (518400, 3)
+
+[PASO 5] Optimización de hiperparámetros Isolation Forest...
 Iniciando búsqueda de mejores parámetros...
 Parámetros: {'contamination': 0.1, 'max_features': 1.0, 'max_samples': 'auto', 'n_estimators': 50}
 Anomalías detectadas: 500 (10.00%)
@@ -11,14 +19,22 @@ Separación scores (P95-P50): 0.3883
 Std scores: 0.2024
 Mejores parámetros encontrados: {'contamination': 0.1, 'max_features': 1.0, 'max_samples': 'auto', 'n_estimators': 50}
 Mejor separación de scores: 0.3883
-Aplicando mejores parámetros al dataset completo...
+
+[PASO 6] Entrenamiento del modelo final con dataset completo...
+
+[PASO 7] Cálculo de scores de anomalía y detección...
 Detección completada: 51839 anomalías (10.00%)
+
+[PASO 8] Guardado de modelos, escaladores y resultados...
 Métricas guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\deteccion_anomalias\Isolation Forest\metricas_IForest\metrics.txt
 Modelo guardado en formatos pickle y HDF5
 Escalador guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\deteccion_anomalias\Isolation Forest\modelos_entrenados_IForest\scaler.pkl
-Tiempo total de ejecucion: 13.71 segundos
-Memoria maxima utilizada: 64.12 MB
+Tiempo total de ejecucion: 12.53 segundos
+Memoria maxima utilizada: 64.13 MB
+
+[PASO 9] Generación de visualizaciones...
 Gráficos generados y guardados
 Anomalías guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\deteccion_anomalias\Isolation Forest\metricas_IForest\anomalies.csv
 Métricas CSV guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\deteccion_anomalias\Isolation Forest\metricas_IForest\metrics.csv
-Proceso completado exitosamente
+
+=== PROCESO COMPLETADO EXITOSAMENTE ===

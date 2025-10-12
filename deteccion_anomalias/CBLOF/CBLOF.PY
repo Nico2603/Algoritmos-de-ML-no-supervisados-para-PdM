@@ -612,7 +612,21 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
 
 
 def main() -> None:
-    """Función principal que ejecuta todo el pipeline de detección de anomalías."""
+    """
+    ============================================================================
+    PIPELINE DE DETECCIÓN DE ANOMALÍAS CBLOF - FLUJO COMPLETO
+    ============================================================================
+    PASO 1: Carga y validación de datos
+    PASO 2: Preprocesamiento y creación de características
+    PASO 3: Normalización de datos (MinMaxScaler)
+    PASO 4: Reducción dimensional con PCA
+    PASO 5: Optimización de hiperparámetros (grid search CBLOF)
+    PASO 6: Entrenamiento del modelo final con dataset completo
+    PASO 7: Cálculo de scores de anomalía y detección
+    PASO 8: Guardado de modelos, escaladores y resultados
+    PASO 9: Generación de visualizaciones (3D, distribución scores)
+    ============================================================================
+    """
     tiempo_inicio = time.time()
     tracemalloc.start()
     
@@ -625,17 +639,32 @@ def main() -> None:
         
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        # Usar archivo de datos centralizado en la raíz del proyecto
+        # ========================================================================
+        # PASO 1: CARGA Y VALIDACIÓN DE DATOS
+        # ========================================================================
+        logging.info("\n[PASO 1] Carga y validación de datos...")
         ruta_datos = directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
         datos = cargar_y_validar_datos(ruta_datos)
         
+        # ========================================================================
+        # PASO 2+3: PREPROCESAMIENTO Y NORMALIZACIÓN
+        # ========================================================================
+        logging.info("\n[PASO 2-3] Preprocesamiento y normalización de datos...")
         X_escalado, escalador, datos_limpios = preprocesar_datos(datos)
         logging.info(f"Datos preprocesados: {X_escalado.shape[0]} muestras, {X_escalado.shape[1]} características")
         
+        # ========================================================================
+        # PASO 4: REDUCCIÓN DIMENSIONAL CON PCA
+        # ========================================================================
+        logging.info("\n[PASO 4] Aplicando PCA para reducción dimensional...")
         X_pca, pca = aplicar_pca(X_escalado)
         
         X_para_optimizacion, indices_muestra = reducir_muestra_para_optimizacion(X_escalado)
         
+        # ========================================================================
+        # PASO 5: OPTIMIZACIÓN DE HIPERPARÁMETROS
+        # ========================================================================
+        logging.info("\n[PASO 5] Optimización de hiperparámetros CBLOF...")
         mejor_modelo_muestra, metricas = buscar_mejores_parametros(X_para_optimizacion)
         
         mejores_parametros = {
@@ -645,7 +674,10 @@ def main() -> None:
             'use_weights': mejor_modelo_muestra.use_weights
         }
         
-        logging.info(f"Aplicando mejores parámetros al dataset completo...")
+        # ========================================================================
+        # PASO 6: ENTRENAMIENTO DEL MODELO FINAL
+        # ========================================================================
+        logging.info("\n[PASO 6] Entrenamiento del modelo final con dataset completo...")
         mejor_modelo = CBLOF(
             n_clusters=mejores_parametros['n_clusters'],
             alpha=mejores_parametros['alpha'],
@@ -656,12 +688,20 @@ def main() -> None:
         )
         mejor_modelo.fit(X_escalado)
         
+        # ========================================================================
+        # PASO 7: CÁLCULO DE SCORES DE ANOMALÍA Y DETECCIÓN
+        # ========================================================================
+        logging.info("\n[PASO 7] Cálculo de scores de anomalía y detección...")
         metricas_adicionales = calcular_metricas_adicionales(mejor_modelo, X_escalado)
         
         # Obtener scores normalizados para métricas consistentes
         anomaly_scores_raw = mejor_modelo.decision_scores_
         anomaly_scores_normalized = config.normalizar_scores_min_max(anomaly_scores_raw)
         
+        # ========================================================================
+        # PASO 8: GUARDADO DE MODELOS Y RESULTADOS
+        # ========================================================================
+        logging.info("\n[PASO 8] Guardado de modelos, escaladores y resultados...")
         guardar_metricas(metricas, metricas_adicionales, mejores_parametros, directorio_metricas,
                         anomaly_scores_normalized)
         guardar_modelo(mejor_modelo, directorio_modelos)
@@ -683,6 +723,10 @@ def main() -> None:
         logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
+        # ========================================================================
+        # PASO 9: GENERACIÓN DE VISUALIZACIONES
+        # ========================================================================
+        logging.info("\n[PASO 9] Generación de visualizaciones...")
         generar_visualizaciones(mejor_modelo, X_pca, datos_limpios, directorio_graficas)
         
         guardar_anomalias_detectadas(mejor_modelo, datos_limpios, directorio_metricas)
@@ -692,7 +736,7 @@ def main() -> None:
                             tiempo_total, memoria_max)
         logging.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         
-        logging.info("=== PROCESO COMPLETADO EXITOSAMENTE ===")
+        logging.info("\n=== PROCESO COMPLETADO EXITOSAMENTE ===")
         
     except Exception as e:
         tracemalloc.stop()

@@ -4,5 +4,5 @@ Porcentaje de Anomalías (%),10.00,10.00
 Separación de Scores (P95-P50),0.3643,0.3883
 Score Promedio,0.4802,0.3842
 Número de Clusters (si aplica),5,N/A
-Tiempo de Ejecución (s),18.02,13.71
-Memoria Máxima (MB),92.59,64.12
+Tiempo de Ejecución (s),13.99,12.53
+Memoria Máxima (MB),92.59,64.13

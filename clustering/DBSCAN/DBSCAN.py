@@ -248,6 +248,60 @@ class ProcesadorDatos:
         
         logging.info(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
         return X_reducido, etiquetas_reducidas
+    
+    @staticmethod
+    def estimar_eps_con_k_distance(X_escalado: np.ndarray, k: int = 8, 
+                                    muestra: int = 5000) -> Optional[float]:
+        """
+        Estima eps óptimo usando k-distance plot y knee detection.
+        
+        Args:
+            X_escalado: Datos escalados
+            k: Valor de k para k-nearest neighbors (default: 8 ≈ 2*dim con 4 features)
+            muestra: Tamaño de muestra para cálculo (default: 5000)
+        
+        Returns:
+            eps estimado con rodilla del k-distance, o None si falla
+        """
+        try:
+            from kneed import KneeLocator
+        except ImportError:
+            logging.warning("kneed no está instalado. Instala con: pip install kneed")
+            return None
+        
+        try:
+            # Muestrear si dataset es muy grande
+            if len(X_escalado) > muestra:
+                config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
+                indices = np.random.choice(len(X_escalado), muestra, replace=False)
+                X_muestra = X_escalado[indices]
+            else:
+                X_muestra = X_escalado
+            
+            # Calcular k-distance
+            neighbors = NearestNeighbors(n_neighbors=k, n_jobs=N_JOBS_PARALELO)
+            neighbors.fit(X_muestra)
+            distances, _ = neighbors.kneighbors(X_muestra)
+            k_distances = np.sort(distances[:, -1])  # k-ésima distancia
+            
+            # Detectar rodilla
+            kneedle = KneeLocator(range(len(k_distances)), k_distances,
+                                 curve='convex', direction='increasing',
+                                 S=1.0, online=False)
+            
+            if kneedle.knee is not None:
+                eps_knee = k_distances[kneedle.knee] * 1.05  # 5% buffer
+                eps_knee = np.clip(eps_knee, 0.1, 0.6)  # Acotar rango
+                logging.info(f"[K-DISTANCE] Knee detectado en índice {kneedle.knee}")
+                logging.info(f"[K-DISTANCE] eps estimado = {eps_knee:.4f} (con buffer 5%)")
+                return float(eps_knee)
+            else:
+                logging.warning("[K-DISTANCE] No se pudo detectar rodilla claramente")
+                return None
+                
+        except Exception as e:
+            logging.warning(f"[K-DISTANCE] Error durante knee detection: {e}")
+            return None
 
 
 class OptimizadorDBSCAN:
@@ -371,6 +425,20 @@ class VisualizadorClusters:
             etiquetas_unicas = set(etiquetas_vis)
             colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
             
+            # Determinar qué clusters mostrar en leyenda (top 10 + ruido)
+            clusters_validos = [et for et in etiquetas_unicas if et != -1]
+            if len(clusters_validos) > 10:
+                # Contar puntos por cluster
+                cluster_sizes = {et: np.sum(etiquetas_vis == et) for et in clusters_validos}
+                top_10_clusters = sorted(cluster_sizes.items(), key=lambda x: x[1], reverse=True)[:10]
+                top_10_ids = set([c[0] for c in top_10_clusters])
+                mostrar_en_leyenda = top_10_ids | {-1}  # Top 10 + ruido
+                otros_clusters_count = len(clusters_validos) - 10
+                logging.info(f"[VISUALIZACIÓN] Mostrando top 10 clusters en leyenda ({otros_clusters_count} adicionales ocultos)")
+            else:
+                mostrar_en_leyenda = etiquetas_unicas
+                otros_clusters_count = 0
+            
             fig = plt.figure(figsize=config.FIGSIZE_3D)
             ax = fig.add_subplot(111, projection='3d')
             
@@ -382,8 +450,10 @@ class VisualizadorClusters:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
                              c='black', marker='x', s=SCATTER_SIZE_NOISE, alpha=0.7, label='Ruido')
                 else:
+                    # Solo añadir label si está en top 10
+                    label = f'Cluster {etiqueta}' if etiqueta in mostrar_en_leyenda else None
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
-                             c=[color], marker='o', s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
+                             c=[color], marker='o', s=SCATTER_SIZE, alpha=0.7, label=label)
             
             ax.set_title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
                         fontsize=14, pad=15)
@@ -408,7 +478,16 @@ class VisualizadorClusters:
             
             ax.view_init(elev=config.VIEW_ELEV, azim=config.VIEW_AZIM)
             
-            ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
+            # Añadir leyenda con proxy para "otros clusters" si aplica
+            if otros_clusters_count > 0:
+                from matplotlib.patches import Patch
+                extra = Patch(facecolor='gray', edgecolor='black', alpha=0.5,
+                            label=f'... y {otros_clusters_count} clusters más')
+                handles, labels = ax.get_legend_handles_labels()
+                handles.append(extra)
+                ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(0.02, 0.98), fontsize=9)
+            else:
+                ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98), fontsize=9)
             
             ruta_grafica = directorio_graficas / 'clusters_3d_pca.png'
             plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
@@ -600,6 +679,21 @@ class DetectorAnomalias:
 
 
 def main():
+    """
+    ============================================================================
+    PIPELINE DE CLUSTERING DBSCAN - FLUJO COMPLETO
+    ============================================================================
+    PASO 1: Carga y validación de datos
+    PASO 2: Preprocesamiento y creación de características
+    PASO 3: Normalización de datos (MinMaxScaler)
+    PASO 4: Optimización de hiperparámetros (k-distance + grid search)
+    PASO 5: Entrenamiento del modelo final con dataset completo
+    PASO 6: Cálculo de métricas de clustering (Silhouette, Calinski, Davies-Bouldin)
+    PASO 7: Detección de anomalías basada en clustering
+    PASO 8: Guardado de modelos, escaladores y resultados
+    PASO 9: Generación de visualizaciones (3D, anomalías)
+    ============================================================================
+    """
     tiempo_inicio = time.time()
     tracemalloc.start()
     
@@ -613,21 +707,69 @@ def main():
         
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        # Usar archivo de datos centralizado en la raíz del proyecto
+        # ========================================================================
+        # PASO 1: CARGA Y VALIDACIÓN DE DATOS
+        # ========================================================================
+        logging.info("\n[PASO 1] Carga y validación de datos...")
         ruta_datos = directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
         datos_originales = ProcesadorDatos.cargar_datos(ruta_datos)
         logging.info(f"Datos cargados: {len(datos_originales)} filas")
         
+        # ========================================================================
+        # PASO 2: PREPROCESAMIENTO Y CREACIÓN DE CARACTERÍSTICAS
+        # ========================================================================
+        logging.info("\n[PASO 2] Preprocesamiento y creación de características...")
         datos_procesados, matriz_caracteristicas = ProcesadorDatos.preprocesar_datos(datos_originales)
+        
+        # ========================================================================
+        # PASO 3: NORMALIZACIÓN DE DATOS
+        # ========================================================================
+        logging.info("\n[PASO 3] Normalización de datos con MinMaxScaler...")
         X_escalado, escalador = ProcesadorDatos.escalar_datos(matriz_caracteristicas)
         
         X_para_optimizacion, indices_muestra = ProcesadorDatos.reducir_muestra_para_optimizacion(X_escalado)
         
-        grilla_parametros = OptimizadorDBSCAN.generar_grilla_parametros()
+        # ========================================================================
+        # PASO 4: OPTIMIZACIÓN DE HIPERPARÁMETROS
+        # ========================================================================
+        logging.info("\n[PASO 4] Optimización de hiperparámetros...")
+        # Intentar estimar eps con k-distance
+        logging.info("[OPTIMIZACIÓN] Estimando eps óptimo con k-distance plot...")
+        eps_estimado = ProcesadorDatos.estimar_eps_con_k_distance(X_escalado, k=8, muestra=5000)
+        
+        if eps_estimado is not None:
+            # Grid refinado alrededor del eps estimado (rango amplio para explorar)
+            logging.info(f"[OPTIMIZACIÓN] Usando grid refinado alrededor de eps={eps_estimado:.4f}")
+            eps_values = [
+                eps_estimado * 0.5,
+                eps_estimado * 0.8,
+                eps_estimado,
+                eps_estimado * 1.5,
+                eps_estimado * 2.0,
+                eps_estimado * 3.0
+            ]
+            min_samples_values = [3, 5, 8]
+            
+            param_grid = {'eps': eps_values, 'min_samples': min_samples_values}
+            grilla_parametros = list(ParameterGrid(param_grid))
+            logging.info(f"Grid refinado generado: {len(grilla_parametros)} combinaciones")
+        else:
+            # Fallback: Grid search reducido con valores más razonables
+            logging.info("[OPTIMIZACIÓN] Fallback: usando grid search con valores mejorados")
+            eps_values = [0.12, 0.16, 0.20, 0.24, 0.28, 0.32]
+            min_samples_values = [5, 8]
+            
+            param_grid = {'eps': eps_values, 'min_samples': min_samples_values}
+            grilla_parametros = list(ParameterGrid(param_grid))
+            logging.info(f"Grid fallback generado: {len(grilla_parametros)} combinaciones")
+        
         mejor_resultado, resultados_validos = OptimizadorDBSCAN.buscar_mejores_parametros(X_para_optimizacion, grilla_parametros)
         
+        # ========================================================================
+        # PASO 5: ENTRENAMIENTO DEL MODELO FINAL
+        # ========================================================================
+        logging.info("\n[PASO 5] Entrenamiento del modelo final con dataset completo...")
         mejores_parametros = mejor_resultado['parametros']
-        logging.info(f"Aplicando mejores parámetros al dataset completo...")
         
         modelo_final = DBSCAN(eps=mejores_parametros['eps'], min_samples=mejores_parametros['min_samples'])
         etiquetas_finales = modelo_final.fit_predict(X_escalado)
@@ -635,6 +777,10 @@ def main():
         n_clusters_final = len(set(etiquetas_finales)) - (1 if -1 in etiquetas_finales else 0)
         n_ruido_final = list(etiquetas_finales).count(-1)
         
+        # ========================================================================
+        # PASO 6: CÁLCULO DE MÉTRICAS DE CLUSTERING
+        # ========================================================================
+        logging.info("\n[PASO 6] Cálculo de métricas de clustering...")
         mascara_sin_ruido = etiquetas_finales != -1
         n_puntos_sin_ruido = np.sum(mascara_sin_ruido)
         
@@ -684,6 +830,16 @@ def main():
         logging.info(f"Calinski-Harabasz: {metricas['calinski_harabasz']:{FORMATO_METRICAS}}")
         logging.info(f"Davies-Bouldin: {metricas['davies_bouldin']:{FORMATO_METRICAS}}")
         
+        # ========================================================================
+        # PASO 7: DETECCIÓN DE ANOMALÍAS BASADA EN CLUSTERING
+        # ========================================================================
+        logging.info("\n[PASO 7] Detección de anomalías basada en clustering...")
+        anomaly_scores = DetectorAnomalias.calcular_scores_todos_los_puntos(etiquetas_finales, X_escalado, modelo_final)
+        
+        # ========================================================================
+        # PASO 8: GUARDADO DE MODELOS Y RESULTADOS
+        # ========================================================================
+        logging.info("\n[PASO 8] Guardado de modelos, escaladores y resultados...")
         ruta_metricas = os.path.join(gestor_directorios.directorio_metricas, 'metrics.txt')
         GuardadorModelos.guardar_metricas(metricas, ruta_metricas)
         
@@ -705,10 +861,11 @@ def main():
         logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
+        # ========================================================================
+        # PASO 9: GENERACIÓN DE VISUALIZACIONES
+        # ========================================================================
+        logging.info("\n[PASO 9] Generación de visualizaciones...")
         VisualizadorClusters.visualizar_clusters_3d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
-        
-        # Calcular scores de anomalía para visualización
-        anomaly_scores = DetectorAnomalias.calcular_scores_todos_los_puntos(etiquetas_finales, X_escalado, modelo_final)
         
         # Visualizar anomalías
         if len(np.unique(etiquetas_finales)) > 1:

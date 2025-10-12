@@ -1,4 +1,6 @@
 === INICIANDO PROCESO DE CLUSTERING DBSCAN ===
+
+[PASO 1] Carga y validación de datos...
 Archivo CSV cargado exitosamente:
   - Dimensiones: 518400 filas x 4 columnas
   - Columnas cargadas: ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']
@@ -13,6 +15,8 @@ Archivo CSV cargado exitosamente:
     Fila 3: {'fecha': Timestamp('2025-01-01 00:00:10'), 'acceleration_x': 0.3403279185295105, 'acceleration_y': 9.105401039123535, 'acceleration_z': 0.7304587364196777}
   - No se encontraron valores faltantes
 Datos cargados: 518400 filas
+
+[PASO 2] Preprocesamiento y creación de características...
 Características base validadas: ['acceleration_x', 'acceleration_y', 'acceleration_z']
 Columnas adicionales encontradas: ['fecha']
 Limpieza de datos:
@@ -42,44 +46,57 @@ Estadísticas de características para clustering:
     • Media: 10.1243
     • Desv. Estándar: 2.4015
 Matriz de características creada: (518400, 4)
+
+[PASO 3] Normalización de datos con MinMaxScaler...
 Datos normalizados al rango [0, 1] correctamente
 Dataset reducido para optimización: 518400 -> 5000 muestras
-Grilla de parámetros generada: 50 combinaciones
+
+[PASO 4] Optimización de hiperparámetros...
+[OPTIMIZACIÓN] Estimando eps óptimo con k-distance plot...
+[K-DISTANCE] Knee detectado en índice 4936
+[K-DISTANCE] eps estimado = 0.1240 (con buffer 5%)
+[OPTIMIZACIÓN] Usando grid refinado alrededor de eps=0.1240
+Grid refinado generado: 18 combinaciones
 Iniciando búsqueda de mejores parámetros...
-Total de combinaciones a evaluar: 50
+Total de combinaciones a evaluar: 18
 Tamaño de datos para optimización: (5000, 4)
 Número de trabajos paralelos: 2
-Combinaciones válidas encontradas: 6/50
+Combinaciones válidas encontradas: 3/18
 Mejor resultado encontrado:
-  - Parámetros: eps=0.010, min_samples=3
-  - Silhouette Score: 0.9877
+  - Parámetros: eps=0.062, min_samples=8
+  - Silhouette Score: -0.0085
 Búsqueda de parámetros completada
-Aplicando mejores parámetros al dataset completo...
+
+[PASO 5] Entrenamiento del modelo final con dataset completo...
+
+[PASO 6] Cálculo de métricas de clustering...
+Solo se encontro 1 cluster unico. No se pueden calcular metricas de clustering.
 
 === MEJORES RESULTADOS ===
-Parámetros óptimos: eps=0.010, min_samples=3
-Clusters encontrados: 30034
-Puntos de ruido: 151432
-Coeficiente Silhouette: -0.3210
-Calinski-Harabasz: 87.7703
-Davies-Bouldin: 0.8273
+Parámetros óptimos: eps=0.062, min_samples=8
+Clusters encontrados: 1
+Puntos de ruido: 0
+Coeficiente Silhouette: -1.0000
+Calinski-Harabasz: 0.0000
+Davies-Bouldin: inf
+
+[PASO 7] Detección de anomalías basada en clustering...
+Dataset grande detectado (518400 puntos), usando procesamiento por batches...
+
+[PASO 8] Guardado de modelos, escaladores y resultados...
 Métricas guardadas en: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\metricas_DBSCAN\metrics.txt
 Modelo guardado en formato pickle: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\modelos_entrenados_DBSCAN\dbscan_model.pkl
 Escalador guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\modelos_entrenados_DBSCAN\scaler.pkl
 Parámetros del modelo guardados en HDF5: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\modelos_entrenados_DBSCAN\dbscan_model.h5
-Tiempo total de ejecucion: 140.22 segundos
-Memoria maxima utilizada: 20708.87 MB
+Tiempo total de ejecucion: 59.44 segundos
+Memoria maxima utilizada: 193.94 MB
+
+[PASO 9] Generación de visualizaciones...
 Dataset reducido para visualización: 518400 -> 3000 muestras
 Visualización 3D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\graficas_DBSCAN\clusters_3d_pca.png
 Dataset grande detectado (518400 puntos), usando procesamiento por batches...
-Visualización de anomalías generada exitosamente
-Visualización de anomalías generada
-Dataset grande detectado (518400 puntos), usando procesamiento por batches...
 Scores de todos los puntos guardados en: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\metricas_DBSCAN\anomaly_scores.csv
 Métricas CSV guardadas en: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\metricas_DBSCAN\metrics.csv
-Anomalías guardadas en: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\clustering\DBSCAN\metricas_DBSCAN\anomalies.csv
-Total de anomalías detectadas: 151432
-Score promedio de anomalías: 0.2801
-Score máximo de anomalía: 1.0000
+No se detectaron anomalías
 
 === PROCESO COMPLETADO EXITOSAMENTE ===
