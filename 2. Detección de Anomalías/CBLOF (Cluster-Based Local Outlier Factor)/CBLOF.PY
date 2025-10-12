@@ -56,7 +56,7 @@ FIGSIZE_2D = config.FIGSIZE_2D
 FIGSIZE_3D = config.FIGSIZE_3D
 
 PARAM_GRID = {
-    'n_clusters': [5, 8],
+    'n_clusters': [5],
     'alpha': [0.8],
     'beta': [5],
     'use_weights': [True]

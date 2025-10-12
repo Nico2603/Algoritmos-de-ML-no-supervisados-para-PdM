@@ -74,9 +74,9 @@ function RunStep {
     
     Write-Log "Iniciando $Title" "INFO"
     
-    $cmd = "chcp 65001 >NUL & ""$VenvPath"" ""$ScriptPath"" 2>&1"
-    $output = cmd /c $cmd
-    Add-Content -Path $LogFile -Value $output -Encoding utf8
+    # Ejecutar el script de Python directamente, mostrando output en tiempo real
+    # Python ya tiene su propio logging interno, así que no necesitamos duplicarlo aquí
+    & $VenvPath $ScriptPath
     $exitCode = $LASTEXITCODE
     
     if ($exitCode -eq 0) {

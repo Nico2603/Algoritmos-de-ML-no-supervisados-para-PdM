@@ -32,7 +32,7 @@ warnings.filterwarnings('ignore')
 
 RANDOM_STATE = config.RANDOM_STATE
 K_MIN = 2
-K_MAX = 6
+K_MAX = 4
 FIGSIZE_2D = config.FIGSIZE_2D
 FIGSIZE_3D = config.FIGSIZE_3D
 SCATTER_SIZE = config.SCATTER_SIZE_NORMAL

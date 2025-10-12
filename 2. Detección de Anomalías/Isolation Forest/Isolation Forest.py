@@ -52,9 +52,9 @@ FIGSIZE_2D = config.FIGSIZE_2D
 FIGSIZE_3D = config.FIGSIZE_3D
 
 PARAMETROS_BUSQUEDA = {
-    'n_estimators': [50, 100],
+    'n_estimators': [50],
     'max_samples': ['auto'],
-    'contamination': [0.05, 0.1],
+    'contamination': [0.1],
     'max_features': [1.0]
 }
 MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION

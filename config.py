@@ -6,11 +6,11 @@ from typing import List, Optional, Tuple
 import warnings
 
 RANDOM_STATE = 42
-MAX_MUESTRAS_OPTIMIZACION = 10000
-MAX_MUESTRAS_VISUALIZATION = 8000
+MAX_MUESTRAS_OPTIMIZACION = 5000
+MAX_MUESTRAS_VISUALIZATION = 3000
 
 try:
-    N_JOBS_PARALELO = max(1, multiprocessing.cpu_count() - 1)
+    N_JOBS_PARALELO = min(2, max(1, multiprocessing.cpu_count() // 2))
 except:
     N_JOBS_PARALELO = 1
 

@@ -273,9 +273,9 @@ class AnalizadorDistancias:
 class OptimizadorDBSCAN:
     
     @staticmethod
-    def generar_grilla_parametros(eps_min: float = 0.1, eps_max: float = 2.0, 
-                                 n_eps: int = 8, min_samples_min: int = 2, 
-                                 min_samples_max: int = 10) -> List[Dict[str, Any]]:
+    def generar_grilla_parametros(eps_min: float = 0.3, eps_max: float = 1.2, 
+                                 n_eps: int = 4, min_samples_min: int = 3, 
+                                 min_samples_max: int = 5) -> List[Dict[str, Any]]:
         valores_eps = np.linspace(eps_min, eps_max, n_eps)
         valores_min_samples = range(min_samples_min, min_samples_max + 1)
         
