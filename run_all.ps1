@@ -74,8 +74,9 @@ function RunStep {
     
     Write-Log "Iniciando $Title" "INFO"
     
-    $cmd = "chcp 65001 >NUL & ""$VenvPath"" ""$ScriptPath"" >> ""$LogFile"" 2>&1"
-    cmd /c $cmd
+    $cmd = "chcp 65001 >NUL & ""$VenvPath"" ""$ScriptPath"" 2>&1"
+    $output = cmd /c $cmd
+    Add-Content -Path $LogFile -Value $output -Encoding utf8
     $exitCode = $LASTEXITCODE
     
     if ($exitCode -eq 0) {
@@ -175,13 +176,13 @@ Write-Host ""
 
 # 4.1 Isolation Forest
 Write-Host "  >> Ejecutando Isolation Forest..." -ForegroundColor $ColorInfo
-$IForestPath = Join-Path $ScriptDir "2. Detección de Anomalías\Isolation Forest\Isolation Forest.py"
+$IForestPath = "$ScriptDir\2. Detección de Anomalías\Isolation Forest\Isolation Forest.py"
 RunStep "Isolation Forest" $IForestPath
 Write-Host ""
 
 # 4.2 CBLOF
 Write-Host "  >> Ejecutando CBLOF..." -ForegroundColor $ColorInfo
-$CBLOFPath = Join-Path $ScriptDir "2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\CBLOF.PY"
+$CBLOFPath = "$ScriptDir\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\CBLOF.PY"
 RunStep "CBLOF" $CBLOFPath
 Write-Host ""
 
@@ -199,7 +200,7 @@ Write-Host ""
 
 # 5.2 Comparacion Deteccion de Anomalias
 Write-Host "  >> Comparando Algoritmos de Deteccion de Anomalias (Isolation Forest vs CBLOF)..." -ForegroundColor $ColorInfo
-$CompAnomaliesPath = Join-Path $ScriptDir "2. Detección de Anomalías\Comparaciones\comparar_algoritmos.py"
+$CompAnomaliesPath = "$ScriptDir\2. Detección de Anomalías\Comparaciones\comparar_algoritmos.py"
 RunStep "Comparacion de Deteccion de Anomalias" $CompAnomaliesPath
 Write-Host ""
 
@@ -218,10 +219,10 @@ Write-Host ""
 $ArchivosEsperados = @(
     ".\1. Clustering\K-means\metricas_KMeans\metrics.csv",
     ".\1. Clustering\DBSCAN\metricas_DBSCAN\metrics.csv",
-    ".\2. Detección de Anomalías\Isolation Forest\metricas_IForest\metrics.csv",
-    ".\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv",
+    "$ScriptDir\2. Detección de Anomalías\Isolation Forest\metricas_IForest\metrics.csv",
+    "$ScriptDir\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv",
     ".\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt",
-    ".\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt"
+    "$ScriptDir\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt"
 )
 
 $ArchivosGenerados = 0
@@ -273,7 +274,7 @@ Write-Host ""
 
 Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $(if ($ExitCodeFinal -eq 0) { $ColorExito } else { $ColorAdvertencia })
 Write-Host "  1. Comparacion Clustering: .\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt" -ForegroundColor $ColorInfo
-Write-Host "  2. Comparacion Deteccion de Anomalias: .\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
+Write-Host "  2. Comparacion Deteccion de Anomalias: $ScriptDir\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host ""
