@@ -80,7 +80,7 @@ def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def crear_comparacion_imagenes_lado_a_lado() -> None:
-    print("\n📊 Generando comparación visual de gráficas...")
+    print("\nGenerando comparacion visual de graficas...")
     
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
@@ -183,7 +183,7 @@ def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame,
 
 def generar_graficos_metricas(metricas_dbscan: pd.DataFrame, 
                               metricas_kmeans: pd.DataFrame) -> None:
-    print("\n📈 Generando gráficos comparativos de métricas...")
+    print("\nGenerando graficos comparativos de metricas...")
     
     metricas_nombres = ['Silhouette\nScore', 'Calinski-\nHarabasz\n(x1000)', 'Davies-\nBouldin\n(Inverso)']
     
@@ -420,7 +420,7 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
 
 def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str, Any],
                              metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> None:
-    print("\n📝 Generando reporte completo...")
+    print("\nGenerando reporte completo...")
     
     ruta_reporte = DIRECTORIO_COMPARACIONES / 'REPORTE_COMPARACION_CLUSTERING.txt'
     
@@ -541,15 +541,15 @@ def main():
     if not verificar_archivos():
         return
     
-    print("\n[OK] Todos los archivos necesarios están presentes.")
+    print("\n[OK] Todos los archivos necesarios estan presentes.")
     
-    print("\n📂 Cargando métricas...")
+    print("\nCargando metricas...")
     metricas_dbscan, metricas_kmeans = cargar_metricas()
-    print("[OK] Métricas cargadas correctamente.")
+    print("[OK] Metricas cargadas correctamente.")
     
     crear_comparacion_imagenes_lado_a_lado()
     
-    print("\n📋 Generando tabla comparativa...")
+    print("\nGenerando tabla comparativa...")
     tabla_comparativa = crear_tabla_comparativa_metricas(metricas_dbscan, metricas_kmeans)
     print("\n" + tabla_comparativa.to_string(index=False))
     
@@ -561,16 +561,16 @@ def main():
     
     crear_grafico_rendimiento(metricas_dbscan, metricas_kmeans)
     
-    print("\n🔍 Analizando resultados...")
+    print("\nAnalizando resultados...")
     analisis = analizar_ganador(metricas_dbscan, metricas_kmeans)
-    print(f"\n🏆 ALGORITMO GANADOR: {analisis['ganador']}")
-    print(f"   Puntuación: DBSCAN {analisis['puntos_dbscan']}/3 - K-Means {analisis['puntos_kmeans']}/3")
+    print(f"\nALGORITMO GANADOR: {analisis['ganador']}")
+    print(f"   Puntuacion: DBSCAN {analisis['puntos_dbscan']}/3 - K-Means {analisis['puntos_kmeans']}/3")
     
     guardar_reporte_completo(tabla_comparativa, analisis, metricas_dbscan, metricas_kmeans)
     
     print("\n" + "=" * 100)
-    print(" " * 30 + "[OK] COMPARACIÓN COMPLETADA EXITOSAMENTE")
-    print(" " * 20 + f"📁 Resultados guardados en: {DIRECTORIO_COMPARACIONES}")
+    print(" " * 30 + "[OK] COMPARACION COMPLETADA EXITOSAMENTE")
+    print(" " * 20 + f"Resultados guardados en: {DIRECTORIO_COMPARACIONES}")
     print("=" * 100)
 
 

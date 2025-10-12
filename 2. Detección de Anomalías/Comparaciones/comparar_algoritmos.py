@@ -66,10 +66,10 @@ def verificar_archivos() -> bool:
                 archivos_faltantes.append(f"{algoritmo} - {nombre_archivo}: {ruta}")
     
     if archivos_faltantes:
-        print("❌ ERROR: Archivos faltantes:")
+        print("ERROR: Archivos faltantes:")
         for archivo in archivos_faltantes:
             print(f"  - {archivo}")
-        print("\n⚠️  Asegúrate de ejecutar primero los algoritmos CBLOF e Isolation Forest.")
+        print("\nAsegurate de ejecutar primero los algoritmos CBLOF e Isolation Forest.")
         return False
     
     return True
@@ -82,7 +82,7 @@ def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def crear_comparacion_imagenes_lado_a_lado() -> None:
-    print("\n📊 Generando comparación visual de gráficas...")
+    print("\nGenerando comparacion visual de graficas...")
     
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
@@ -106,7 +106,7 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     ruta_comparacion_scores = DIRECTORIO_COMPARACIONES / 'comparacion_visual_scores.png'
     plt.savefig(ruta_comparacion_scores, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Comparación de scores guardada: {ruta_comparacion_scores.name}")
+    print(f"[OK] Comparacion de scores guardada: {ruta_comparacion_scores.name}")
     
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
@@ -130,7 +130,7 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     ruta_comparacion_3d = DIRECTORIO_COMPARACIONES / 'comparacion_visual_3d.png'
     plt.savefig(ruta_comparacion_3d, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Comparación 3D guardada: {ruta_comparacion_3d.name}")
+    print(f"[OK] Comparacion 3D guardada: {ruta_comparacion_3d.name}")
 
 
 def crear_tabla_comparativa_metricas(metricas_cblof: pd.DataFrame, 
@@ -176,7 +176,7 @@ def crear_tabla_comparativa_metricas(metricas_cblof: pd.DataFrame,
 
 def generar_graficos_metricas(metricas_cblof: pd.DataFrame, 
                               metricas_iforest: pd.DataFrame) -> None:
-    print("\n📈 Generando gráficos comparativos de métricas...")
+    print("\nGenerando graficos comparativos de metricas...")
     
     metricas_nombres = ['Porcentaje de\nAnomalías (%)', 'Separación\nde Scores\n(P95-P50)', 'Score\nPromedio']
     
@@ -226,7 +226,7 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     ruta_grafico = DIRECTORIO_COMPARACIONES / 'comparacion_metricas_barras.png'
     plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Gráfico de barras guardado: {ruta_grafico.name}")
+    print(f"[OK] Grafico de barras guardado: {ruta_grafico.name}")
     
     crear_graficos_individuales(metricas_cblof, metricas_iforest)
 
@@ -255,7 +255,7 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     ruta_porcentajes = DIRECTORIO_COMPARACIONES / 'comparacion_porcentaje_anomalias.png'
     plt.savefig(ruta_porcentajes, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Gráfico de porcentajes guardado: {ruta_porcentajes.name}")
+    print(f"[OK] Grafico de porcentajes guardado: {ruta_porcentajes.name}")
     
     fig, ax = plt.subplots(figsize=(11, 7))
     
@@ -278,7 +278,7 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     ruta_separacion = DIRECTORIO_COMPARACIONES / 'comparacion_separacion_scores.png'
     plt.savefig(ruta_separacion, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Gráfico de separación guardado: {ruta_separacion.name}")
+    print(f"[OK] Grafico de separacion guardado: {ruta_separacion.name}")
 
 
 def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> None:
@@ -330,7 +330,7 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
     ruta_rendimiento = DIRECTORIO_COMPARACIONES / 'comparacion_rendimiento.png'
     plt.savefig(ruta_rendimiento, dpi=200, bbox_inches='tight')
     plt.close("all")
-    print(f"✅ Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
+    print(f"[OK] Grafico de rendimiento guardado: {ruta_rendimiento.name}")
 
 
 def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> Dict[str, Any]:
@@ -395,7 +395,7 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
 
 def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str, Any],
                              metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> None:
-    print("\n📝 Generando reporte completo...")
+    print("\nGenerando reporte completo...")
     
     ruta_reporte = DIRECTORIO_COMPARACIONES / 'REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt'
     
@@ -514,7 +514,7 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("Fecha de generación: Octubre 2025\n")
         f.write("=" * 100 + "\n")
     
-    print(f"✅ Reporte completo guardado: {ruta_reporte.name}")
+    print(f"[OK] Reporte completo guardado: {ruta_reporte.name}")
 
 
 def validar_scores_normalizados() -> None:
@@ -532,12 +532,12 @@ def validar_scores_normalizados() -> None:
                     max_score = np.max(scores)
                     
                     if min_score < -0.01 or max_score > 1.01:
-                        print(f"⚠️  ADVERTENCIA: Scores de {algoritmo} NO están completamente normalizados")
+                        print(f"ADVERTENCIA: Scores de {algoritmo} NO estan completamente normalizados")
                         print(f"   Rango: [{min_score:.4f}, {max_score:.4f}]")
                     else:
-                        print(f"✅ {algoritmo}: Scores normalizados correctamente [0, 1]")
+                        print(f"[OK] {algoritmo}: Scores normalizados correctamente [0, 1]")
             except Exception as e:
-                print(f"❌ Error al validar scores de {algoritmo}: {e}")
+                print(f"Error al validar scores de {algoritmo}: {e}")
 
 
 def main():
@@ -549,39 +549,39 @@ def main():
     if not verificar_archivos():
         return
     
-    print("\n✅ Todos los archivos necesarios están presentes.")
+    print("\n[OK] Todos los archivos necesarios estan presentes.")
     
-    print("\n📂 Cargando métricas...")
+    print("\nCargando metricas...")
     metricas_cblof, metricas_iforest = cargar_metricas()
-    print("✅ Métricas cargadas correctamente.")
+    print("[OK] Metricas cargadas correctamente.")
     
     crear_comparacion_imagenes_lado_a_lado()
     
-    print("\n📋 Generando tabla comparativa...")
+    print("\nGenerando tabla comparativa...")
     tabla_comparativa = crear_tabla_comparativa_metricas(metricas_cblof, metricas_iforest)
     print("\n" + tabla_comparativa.to_string(index=False))
     
     ruta_tabla_csv = DIRECTORIO_COMPARACIONES / 'tabla_comparativa.csv'
     tabla_comparativa.to_csv(ruta_tabla_csv, index=False, encoding='utf-8')
-    print(f"\n✅ Tabla guardada: {ruta_tabla_csv.name}")
+    print(f"\n[OK] Tabla guardada: {ruta_tabla_csv.name}")
     
     generar_graficos_metricas(metricas_cblof, metricas_iforest)
     
     crear_grafico_rendimiento(metricas_cblof, metricas_iforest)
     
-    print("\n🔍 Validando normalización de scores...")
+    print("\nValidando normalizacion de scores...")
     validar_scores_normalizados()
     
-    print("\n🔍 Analizando resultados...")
+    print("\nAnalizando resultados...")
     analisis = analizar_ganador(metricas_cblof, metricas_iforest)
-    print(f"\n🏆 ALGORITMO GANADOR: {analisis['ganador']}")
-    print(f"   Puntuación: CBLOF {analisis['puntos_cblof']} - Isolation Forest {analisis['puntos_iforest']}")
+    print(f"\nALGORITMO GANADOR: {analisis['ganador']}")
+    print(f"   Puntuacion: CBLOF {analisis['puntos_cblof']} - Isolation Forest {analisis['puntos_iforest']}")
     
     guardar_reporte_completo(tabla_comparativa, analisis, metricas_cblof, metricas_iforest)
     
     print("\n" + "=" * 100)
-    print(" " * 30 + "✅ COMPARACIÓN COMPLETADA EXITOSAMENTE")
-    print(" " * 20 + f"📁 Resultados guardados en: {DIRECTORIO_COMPARACIONES}")
+    print(" " * 30 + "[OK] COMPARACION COMPLETADA EXITOSAMENTE")
+    print(" " * 20 + f"Resultados guardados en: {DIRECTORIO_COMPARACIONES}")
     print("=" * 100)
 
 

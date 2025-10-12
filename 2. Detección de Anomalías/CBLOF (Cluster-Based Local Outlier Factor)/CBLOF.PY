@@ -80,7 +80,7 @@ def configurar_logging(directorio_metricas: Path) -> None:
         logger.removeHandler(handler)
     
     ruta_archivo_log = directorio_metricas / ARCHIVO_LOG
-    file_handler = logging.FileHandler(ruta_archivo_log, mode=\'w\', encoding=\'utf-8\')
+    file_handler = logging.FileHandler(ruta_archivo_log, mode='w', encoding='utf-8')
     file_handler.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(file_handler)
     

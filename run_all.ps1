@@ -11,13 +11,13 @@
 #   powershell -ExecutionPolicy Bypass -File "C:\ruta\al\proyecto\run_all.ps1"
 # ============================================================================
 
-# Configuración de encoding UTF-8 para evitar errores con caracteres especiales
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 
-# Forzar backend no-interactivo de matplotlib (extra-seguro)
 $env:MPLBACKEND = "Agg"
+$env:PYTHONHASHSEED = "0"
+$env:OMP_NUM_THREADS = "1"
 
 # Colores para output
 $ColorExito = "Green"
@@ -58,7 +58,8 @@ function Write-Log {
     }
 }
 
-# Función para ejecutar scripts Python con encoding UTF-8 consistente
+$global:PasosFallidos = @()
+
 function RunStep {
     param(
         [string]$Title,
@@ -67,12 +68,12 @@ function RunStep {
     
     if (-not (Test-Path $ScriptPath)) {
         Write-Log "SCRIPT NO ENCONTRADO: $ScriptPath" "ERROR"
+        $global:PasosFallidos += $Title
         return 1
     }
     
     Write-Log "Iniciando $Title" "INFO"
     
-    # Usar cmd con chcp 65001 para forzar UTF-8 y evitar problemas de encoding
     $cmd = "chcp 65001 >NUL & ""$VenvPath"" ""$ScriptPath"" >> ""$LogFile"" 2>&1"
     cmd /c $cmd
     $exitCode = $LASTEXITCODE
@@ -82,6 +83,7 @@ function RunStep {
     } else {
         Write-Log "ERROR en $Title (Exit Code: $exitCode)" "ERROR"
         Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
+        $global:PasosFallidos += $Title
     }
     
     return $exitCode
@@ -232,6 +234,7 @@ foreach ($Archivo in $ArchivosEsperados) {
         $ArchivosGenerados++
     } else {
         Write-Host "  [FALTA] $Archivo" -ForegroundColor $ColorAdvertencia
+        Write-Log "Archivo faltante: $Archivo" "ERROR"
         $ArchivosFaltantes++
     }
 }
@@ -240,21 +243,46 @@ Write-Host ""
 Write-Host "Archivos generados: $ArchivosGenerados / $($ArchivosEsperados.Count)" -ForegroundColor $(if ($ArchivosGenerados -eq $ArchivosEsperados.Count) { $ColorExito } else { $ColorAdvertencia })
 Write-Host ""
 
-Write-Host "=" * 100 -ForegroundColor $ColorExito
-Write-Host " EJECUCION COMPLETADA" -ForegroundColor $ColorExito
-Write-Host "=" * 100 -ForegroundColor $ColorExito
+$ExitCodeFinal = 0
+
+if ($global:PasosFallidos.Count -gt 0) {
+    Write-Host "=" * 100 -ForegroundColor $ColorError
+    Write-Host " EJECUCION COMPLETADA CON ERRORES" -ForegroundColor $ColorError
+    Write-Host "=" * 100 -ForegroundColor $ColorError
+    Write-Log "Los siguientes pasos fallaron:" "ERROR"
+    foreach ($Paso in $global:PasosFallidos) {
+        Write-Log "  - $Paso" "ERROR"
+    }
+    $ExitCodeFinal = 1
+} elseif ($ArchivosFaltantes -gt 0) {
+    Write-Host "=" * 100 -ForegroundColor $ColorAdvertencia
+    Write-Host " EJECUCION COMPLETADA CON ARCHIVOS FALTANTES" -ForegroundColor $ColorAdvertencia
+    Write-Host "=" * 100 -ForegroundColor $ColorAdvertencia
+    Write-Log "Faltan $ArchivosFaltantes archivos esperados" "WARNING"
+    $ExitCodeFinal = 1
+} else {
+    Write-Host "=" * 100 -ForegroundColor $ColorExito
+    Write-Host " EJECUCION COMPLETADA EXITOSAMENTE" -ForegroundColor $ColorExito
+    Write-Host "=" * 100 -ForegroundColor $ColorExito
+}
+
 Write-Host ""
-Write-Log "Proceso de ejecucion automatizada finalizado" "SUCCESS"
+Write-Log "Proceso de ejecucion automatizada finalizado" $(if ($ExitCodeFinal -eq 0) { "SUCCESS" } else { "ERROR" })
 Write-Host "Log completo guardado en: $LogFile" -ForegroundColor $ColorInfo
 Write-Host ""
 
-# Mostrar ubicaciones de reportes finales
-Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $ColorExito
+Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $(if ($ExitCodeFinal -eq 0) { $ColorExito } else { $ColorAdvertencia })
 Write-Host "  1. Comparacion Clustering: .\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt" -ForegroundColor $ColorInfo
 Write-Host "  2. Comparacion Deteccion de Anomalias: .\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host ""
-Write-Host "Ejecucion completada. Revisa los logs y reportes en las carpetas correspondientes." -ForegroundColor $ColorExito
+if ($ExitCodeFinal -eq 0) {
+    Write-Host "Ejecucion completada exitosamente. Revisa los logs y reportes." -ForegroundColor $ColorExito
+} else {
+    Write-Host "Ejecucion completada con errores. Revisa el log en $LogFile" -ForegroundColor $ColorError
+}
 Write-Host ""
+
+exit $ExitCodeFinal
 
