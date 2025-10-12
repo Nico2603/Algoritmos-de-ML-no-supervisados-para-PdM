@@ -1,16 +1,27 @@
+# ============================================================================
+# Dependencias - Algoritmos ML No Supervisados para PdM
+# ============================================================================
+# Requiere Python 3.9 o superior
+
 # Bibliotecas de ciencia de datos y machine learning
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.3.0
-matplotlib>=3.7.0
+numpy>=1.24.0,<3.0.0
+pandas>=2.0.0,<3.0.0
+scikit-learn>=1.3.0,<2.0.0
+matplotlib>=3.7.0,<4.0.0
 
 # PyOD para detección de anomalías
-pyod>=1.1.0
+pyod>=1.1.0,<3.0.0
 
-# Procesamiento y persistencia
-joblib>=1.3.0
-h5py>=3.9.0
+# Numba (requerido por PyOD para optimización)
+numba>=0.56.0,<1.0.0
 
-# Utilidades
-scipy>=1.11.0
+# Procesamiento paralelo y persistencia
+joblib>=1.3.0,<2.0.0
+h5py>=3.9.0,<4.0.0
+
+# Utilidades científicas
+scipy>=1.11.0,<2.0.0
+
+# Typing extensions (para compatibilidad con versiones antiguas de Python)
+typing-extensions>=4.5.0
 

@@ -16,6 +16,9 @@
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 
+# Forzar backend no-interactivo de matplotlib (extra-seguro)
+$env:MPLBACKEND = "Agg"
+
 # Colores para output
 $ColorExito = "Green"
 $ColorError = "Red"
@@ -35,6 +38,9 @@ Write-Host ""
 $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $LogFile = ".\ejecucion_$Timestamp.log"
 
+# Inicializar log en UTF-8 para evitar problemas de codificación
+Set-Content -Path $LogFile -Value "" -Encoding utf8
+
 # Función para logging
 function Write-Log {
     param(
@@ -42,7 +48,7 @@ function Write-Log {
         [string]$Nivel = "INFO"
     )
     $LogEntry = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Nivel] $Mensaje"
-    Add-Content -Path $LogFile -Value $LogEntry
+    Add-Content -Path $LogFile -Value $LogEntry -Encoding utf8
     
     switch ($Nivel) {
         "ERROR" { Write-Host $Mensaje -ForegroundColor $ColorError }
@@ -50,6 +56,35 @@ function Write-Log {
         "WARNING" { Write-Host $Mensaje -ForegroundColor $ColorAdvertencia }
         default { Write-Host $Mensaje -ForegroundColor $ColorInfo }
     }
+}
+
+# Función para ejecutar scripts Python con encoding UTF-8 consistente
+function RunStep {
+    param(
+        [string]$Title,
+        [string]$ScriptPath
+    )
+    
+    if (-not (Test-Path $ScriptPath)) {
+        Write-Log "SCRIPT NO ENCONTRADO: $ScriptPath" "ERROR"
+        return 1
+    }
+    
+    Write-Log "Iniciando $Title" "INFO"
+    
+    # Usar cmd con chcp 65001 para forzar UTF-8 y evitar problemas de encoding
+    $cmd = "chcp 65001 >NUL & ""$VenvPath"" ""$ScriptPath"" >> ""$LogFile"" 2>&1"
+    cmd /c $cmd
+    $exitCode = $LASTEXITCODE
+    
+    if ($exitCode -eq 0) {
+        Write-Log "$Title completado exitosamente" "SUCCESS"
+    } else {
+        Write-Log "ERROR en $Title (Exit Code: $exitCode)" "ERROR"
+        Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
+    }
+    
+    return $exitCode
 }
 
 Write-Log "Iniciando proceso de ejecucion automatizada" "INFO"
@@ -81,7 +116,7 @@ Write-Host ""
 # ============================================================================
 Write-Host "[2/6] Verificando dependencias..." -ForegroundColor $ColorInfo
 
-$RequiredModules = @("numpy", "pandas", "scikit-learn", "matplotlib", "pyod", "joblib", "h5py")
+$RequiredModules = @("numpy", "pandas", "sklearn", "matplotlib", "pyod", "joblib", "h5py", "scipy", "numba")
 $MissingModules = @()
 
 foreach ($Module in $RequiredModules) {
@@ -120,32 +155,14 @@ Write-Host ""
 
 # 3.1 K-Means
 Write-Host "  >> Ejecutando K-Means..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando K-Means" "INFO"
-
-$KMeansPath = ".\1. Clustering\K-means\K-means.py"
-& $VenvPath $KMeansPath 2>&1 | Tee-Object -Variable KMeansOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "K-Means completado exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en K-Means (Exit Code: $LASTEXITCODE)" "ERROR"
-    Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
-}
+$KMeansPath = Join-Path $ScriptDir "1. Clustering\K-means\K-means.py"
+RunStep "K-Means" $KMeansPath
 Write-Host ""
 
 # 3.2 DBSCAN
 Write-Host "  >> Ejecutando DBSCAN..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando DBSCAN" "INFO"
-
-$DBSCANPath = ".\1. Clustering\DBSCAN\DBSCAN.py"
-& $VenvPath $DBSCANPath 2>&1 | Tee-Object -Variable DBSCANOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "DBSCAN completado exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en DBSCAN (Exit Code: $LASTEXITCODE)" "ERROR"
-    Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
-}
+$DBSCANPath = Join-Path $ScriptDir "1. Clustering\DBSCAN\DBSCAN.py"
+RunStep "DBSCAN" $DBSCANPath
 Write-Host ""
 
 # ============================================================================
@@ -156,32 +173,14 @@ Write-Host ""
 
 # 4.1 Isolation Forest
 Write-Host "  >> Ejecutando Isolation Forest..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando Isolation Forest" "INFO"
-
-$IForestPath = ".\2. Deteccion de Anomalias\Isolation Forest\Isolation Forest.py"
-& $VenvPath $IForestPath 2>&1 | Tee-Object -Variable IForestOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "Isolation Forest completado exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en Isolation Forest (Exit Code: $LASTEXITCODE)" "ERROR"
-    Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
-}
+$IForestPath = Join-Path $ScriptDir "2. Detección de Anomalías\Isolation Forest\Isolation Forest.py"
+RunStep "Isolation Forest" $IForestPath
 Write-Host ""
 
 # 4.2 CBLOF
 Write-Host "  >> Ejecutando CBLOF..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando CBLOF" "INFO"
-
-$CBLOFPath = ".\2. Deteccion de Anomalias\CBLOF (Cluster-Based Local Outlier Factor)\CBLOF.PY"
-& $VenvPath $CBLOFPath 2>&1 | Tee-Object -Variable CBLOFOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "CBLOF completado exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en CBLOF (Exit Code: $LASTEXITCODE)" "ERROR"
-    Write-Log "Continuando con el siguiente algoritmo..." "WARNING"
-}
+$CBLOFPath = Join-Path $ScriptDir "2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\CBLOF.PY"
+RunStep "CBLOF" $CBLOFPath
 Write-Host ""
 
 # ============================================================================
@@ -192,30 +191,14 @@ Write-Host ""
 
 # 5.1 Comparacion Clustering
 Write-Host "  >> Comparando Algoritmos de Clustering (K-Means vs DBSCAN)..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando comparacion de Clustering" "INFO"
-
-$CompClusteringPath = ".\1. Clustering\Comparaciones\comparar_algoritmos.py"
-& $VenvPath $CompClusteringPath 2>&1 | Tee-Object -Variable CompClusteringOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "Comparacion de Clustering completada exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en Comparacion de Clustering (Exit Code: $LASTEXITCODE)" "ERROR"
-}
+$CompClusteringPath = Join-Path $ScriptDir "1. Clustering\Comparaciones\comparar_algoritmos.py"
+RunStep "Comparacion de Clustering" $CompClusteringPath
 Write-Host ""
 
 # 5.2 Comparacion Deteccion de Anomalias
 Write-Host "  >> Comparando Algoritmos de Deteccion de Anomalias (Isolation Forest vs CBLOF)..." -ForegroundColor $ColorInfo
-Write-Log "Iniciando comparacion de Deteccion de Anomalias" "INFO"
-
-$CompAnomaliesPath = ".\2. Deteccion de Anomalias\Comparaciones\comparar_algoritmos.py"
-& $VenvPath $CompAnomaliesPath 2>&1 | Tee-Object -Variable CompAnomaliesOutput
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Log "Comparacion de Deteccion de Anomalias completada exitosamente" "SUCCESS"
-} else {
-    Write-Log "ERROR en Comparacion de Deteccion de Anomalias (Exit Code: $LASTEXITCODE)" "ERROR"
-}
+$CompAnomaliesPath = Join-Path $ScriptDir "2. Detección de Anomalías\Comparaciones\comparar_algoritmos.py"
+RunStep "Comparacion de Deteccion de Anomalias" $CompAnomaliesPath
 Write-Host ""
 
 # ============================================================================
@@ -233,10 +216,10 @@ Write-Host ""
 $ArchivosEsperados = @(
     ".\1. Clustering\K-means\metricas_KMeans\metrics.csv",
     ".\1. Clustering\DBSCAN\metricas_DBSCAN\metrics.csv",
-    ".\2. Deteccion de Anomalias\Isolation Forest\metricas_IForest\metrics.csv",
-    ".\2. Deteccion de Anomalias\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv",
+    ".\2. Detección de Anomalías\Isolation Forest\metricas_IForest\metrics.csv",
+    ".\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv",
     ".\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt",
-    ".\2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt"
+    ".\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt"
 )
 
 $ArchivosGenerados = 0
@@ -268,9 +251,10 @@ Write-Host ""
 # Mostrar ubicaciones de reportes finales
 Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $ColorExito
 Write-Host "  1. Comparacion Clustering: .\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt" -ForegroundColor $ColorInfo
-Write-Host "  2. Comparacion Deteccion de Anomalias: .\2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
+Write-Host "  2. Comparacion Deteccion de Anomalias: .\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host ""
 Write-Host "Ejecucion completada. Revisa los logs y reportes en las carpetas correspondientes." -ForegroundColor $ColorExito
+Write-Host ""
 

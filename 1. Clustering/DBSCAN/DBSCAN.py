@@ -307,6 +307,11 @@ class OptimizadorDBSCAN:
             X_sin_ruido = X_escalado[mascara_sin_ruido]
             etiquetas_sin_ruido = etiquetas[mascara_sin_ruido]
             
+            # Verificar que hay al menos 2 clusters únicos en los datos sin ruido
+            n_clusters_unicos = len(set(etiquetas_sin_ruido))
+            if n_clusters_unicos < 2:
+                return None
+            
             silhouette = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
             calinski_harabasz = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
             davies_bouldin = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
@@ -654,14 +659,26 @@ def main():
         n_ruido_final = list(etiquetas_finales).count(-1)
         
         mascara_sin_ruido = etiquetas_finales != -1
-        if np.sum(mascara_sin_ruido) >= MIN_CLUSTERS_VALIDOS:
+        n_puntos_sin_ruido = np.sum(mascara_sin_ruido)
+        
+        # Verificar que hay suficientes puntos y al menos 2 clusters
+        if n_puntos_sin_ruido >= MIN_CLUSTERS_VALIDOS:
             X_sin_ruido = X_escalado[mascara_sin_ruido]
             etiquetas_sin_ruido = etiquetas_finales[mascara_sin_ruido]
+            n_clusters_unicos = len(set(etiquetas_sin_ruido))
             
-            silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
-            calinski_harabasz_final = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
-            davies_bouldin_final = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
+            # Solo calcular métricas si hay al menos 2 clusters diferentes
+            if n_clusters_unicos >= 2:
+                silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+                calinski_harabasz_final = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
+                davies_bouldin_final = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
+            else:
+                logging.warning(f"Solo se encontró 1 cluster único. No se pueden calcular métricas de clustering.")
+                silhouette_final = -1.0
+                calinski_harabasz_final = 0.0
+                davies_bouldin_final = float('inf')
         else:
+            logging.warning(f"Puntos sin ruido insuficientes ({n_puntos_sin_ruido}). Usando métricas de búsqueda.")
             silhouette_final = mejor_resultado['silhouette']
             calinski_harabasz_final = mejor_resultado['calinski_harabasz']
             davies_bouldin_final = mejor_resultado['davies_bouldin']
