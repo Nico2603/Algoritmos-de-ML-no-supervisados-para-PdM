@@ -1,20 +1,16 @@
-# DBSCAN - Density-Based Spatial Clustering **OPTIMIZADO**
+# DBSCAN - Density-Based Spatial Clustering
 
 ## 📋 Descripción
 
-DBSCAN es un algoritmo de clustering basado en densidad que agrupa puntos que están estrechamente empaquetados y marca como outliers los puntos que están solos en regiones de baja densidad. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
-
-### ⚡ Optimizaciones Implementadas  
-- 🚀 **Muestreo estratégico**: Reducción inteligente a 8,000 muestras para optimización de parámetros
-- 🎯 **Visualización optimizada**: Muestreo a 8,000 puntos para gráficas rápidas y claras
-- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
-- ⚡ **Grid simplificado**: Búsqueda reducida de parámetros para ejecución rápida
+DBSCAN (Density-Based Spatial Clustering of Applications with Noise) es un algoritmo de clustering basado en densidad que agrupa puntos que están estrechamente empaquetados y marca como outliers los puntos que están solos en regiones de baja densidad.
 
 ### Características Principales
-- ✅ **Detecta clusters de forma arbitraria** (no solo esféricos)  
-- ✅ **Identifica automáticamente outliers** (puntos de ruido)
-- ✅ **No requiere especificar** el número de clusters a priori
-- ✅ **Optimizado para datasets grandes** (500k+ registros)
+- ✅ Detecta clusters de forma arbitraria (no solo esféricos)  
+- ✅ Identifica automáticamente outliers (puntos de ruido)
+- ✅ No requiere especificar el número de clusters a priori
+- ✅ Búsqueda automática de parámetros óptimos (eps y min_samples)
+- ✅ Visualizaciones en 2D y 3D usando PCA
+- ✅ Genera gráfico k-distance para análisis de parámetros
 - ⚠️ Sensible a la elección de parámetros (eps, min_samples)
 
 ## 🎯 Objetivo
@@ -184,8 +180,3 @@ Esto generará:
 ## 🤝 Contribución al Proyecto
 
 Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de DBSCAN se comparan directamente con K-Means para determinar el mejor algoritmo de clustering para esta aplicación específica.
-
----
-
-**Última actualización**: Octubre 2025  
-**Versión**: 3.0 - **OPTIMIZADA** ⚡

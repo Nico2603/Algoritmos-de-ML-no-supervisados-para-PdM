@@ -1,21 +1,17 @@
-# Isolation Forest - Detección de Anomalías **OPTIMIZADA**
+# Isolation Forest - Detección de Anomalías
 
 ## 📋 Descripción
 
-Isolation Forest es un algoritmo de detección de anomalías basado en ensemble de árboles de decisión. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
-
-### ⚡ Optimizaciones Implementadas
-- 🚀 **Muestreo estratégico**: Reducción inteligente a 10,000 muestras para optimización
-- 🎯 **Visualización optimizada**: Muestreo a 8,000 puntos para gráficas rápidas
-- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
-- ⚡ **Parámetros reducidos**: Grid simplificado para ejecución rápida
+Isolation Forest es un algoritmo de detección de anomalías basado en ensemble de árboles de decisión que identifica anomalías aislándolas mediante particiones aleatorias del espacio de características.
 
 ### Características Principales
-- ✅ **Basado en ensemble de árboles** de decisión
-- ✅ **Muy rápido y altamente escalable** (optimizado)
-- ✅ **Excelente con alta dimensionalidad** 
-- ✅ **No requiere clustering previo**
-- ✅ **Eficiente en memoria**
+- ✅ Basado en ensemble de árboles de decisión
+- ✅ Escalable para datasets grandes
+- ✅ Funciona bien con alta dimensionalidad 
+- ✅ No requiere clustering previo
+- ✅ Eficiente en memoria
+- ✅ Búsqueda automática de hiperparámetros óptimos
+- ✅ Visualizaciones en 3D de anomalías detectadas
 - ⚠️ Puede ser sensible al parámetro de contaminación
 
 ## 🎯 Objetivo
@@ -240,8 +236,3 @@ Isolation Forest es especialmente adecuado para:
 - ✅ Necesidad de detección rápida en tiempo real
 - ✅ Anomalías globales (no contextuales)
 - ✅ Recursos computacionales limitados
-
----
-
-**Última actualización**: Octubre 2025  
-**Versión**: 3.0 - **OPTIMIZADA** ⚡

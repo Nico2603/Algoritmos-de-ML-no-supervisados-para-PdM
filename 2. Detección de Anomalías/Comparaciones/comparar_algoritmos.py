@@ -1,14 +1,3 @@
-"""
-Script de Comparación de Algoritmos de Detección de Anomalías
-CBLOF vs Isolation Forest
-
-Este script realiza una comparación exhaustiva de los algoritmos de detección de anomalías
-generando visualizaciones comparativas, métricas lado a lado y análisis detallado.
-
-Autor: Sistema de Análisis de Detección de Anomalías
-Fecha: Octubre 2025
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,16 +6,35 @@ from matplotlib.gridspec import GridSpec
 import os
 from pathlib import Path
 import json
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import warnings
 
 warnings.filterwarnings('ignore')
 
-# Configuración
+# Función para obtener métricas de forma segura
+def obtener_metrica_segura(df: pd.DataFrame, columna: str, default: float = -1.0) -> float:
+    """
+    Obtiene una métrica de forma segura, manejando NaN y None.
+    
+    Args:
+        df: DataFrame con las métricas
+        columna: Nombre de la columna
+        default: Valor por defecto si la métrica no está disponible
+        
+    Returns:
+        Valor de la métrica o default si no está disponible
+    """
+    try:
+        valor = df[columna].values[0]
+        if pd.isna(valor) or valor is None:
+            return default
+        return float(valor)
+    except (KeyError, IndexError):
+        return default
+
 DIRECTORIO_BASE = Path(__file__).parent.parent
 DIRECTORIO_COMPARACIONES = Path(__file__).parent
 
-# Rutas de datos
 RUTAS = {
     'CBLOF': {
         'metricas_csv': DIRECTORIO_BASE / 'CBLOF (Cluster-Based Local Outlier Factor)' / 'metricas_CBLOF' / 'metrics.csv',
@@ -48,7 +56,6 @@ RUTAS = {
 
 
 def verificar_archivos() -> bool:
-    """Verifica que todos los archivos necesarios existan."""
     archivos_faltantes = []
     
     for algoritmo, rutas in RUTAS.items():
@@ -67,14 +74,12 @@ def verificar_archivos() -> bool:
 
 
 def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Carga las métricas de ambos algoritmos."""
     metricas_cblof = pd.read_csv(RUTAS['CBLOF']['metricas_csv'])
     metricas_iforest = pd.read_csv(RUTAS['Isolation Forest']['metricas_csv'])
     return metricas_cblof, metricas_iforest
 
 
 def crear_comparacion_imagenes_lado_a_lado() -> None:
-    """Crea una comparación visual de las imágenes generadas lado a lado."""
     print("\n📊 Generando comparación visual de gráficas...")
     
     # Comparación de distribución de scores
@@ -134,28 +139,38 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
 
 def crear_tabla_comparativa_metricas(metricas_cblof: pd.DataFrame, 
                                      metricas_iforest: pd.DataFrame) -> pd.DataFrame:
-    """Crea tabla comparativa de métricas."""
+    tiempo_cblof = obtener_metrica_segura(metricas_cblof, 'tiempo_ejecucion_s', 0)
+    tiempo_iforest = obtener_metrica_segura(metricas_iforest, 'tiempo_ejecucion_s', 0)
+    memoria_cblof = obtener_metrica_segura(metricas_cblof, 'memoria_max_mb', 0)
+    memoria_iforest = obtener_metrica_segura(metricas_iforest, 'memoria_max_mb', 0)
+    
     comparacion = {
         'Métrica': [
             'Algoritmo',
             'Porcentaje de Anomalías (%)',
             'Separación de Scores (P95-P50)',
             'Score Promedio',
-            'Número de Clusters (si aplica)'
+            'Número de Clusters (si aplica)',
+            'Tiempo de Ejecución (s)',
+            'Memoria Máxima (MB)'
         ],
         'CBLOF': [
             metricas_cblof['algoritmo'].values[0],
             f"{metricas_cblof['pct_anomalias'].values[0]:.2f}",
             f"{metricas_cblof['p95_minus_p50'].values[0]:.4f}",
             f"{metricas_cblof['mean_score'].values[0]:.4f}",
-            metricas_cblof['n_clusters'].values[0] if not pd.isna(metricas_cblof['n_clusters'].values[0]) else 'N/A'
+            metricas_cblof['n_clusters'].values[0] if not pd.isna(metricas_cblof['n_clusters'].values[0]) else 'N/A',
+            f"{tiempo_cblof:.2f}" if tiempo_cblof > 0 else 'N/A',
+            f"{memoria_cblof:.2f}" if memoria_cblof > 0 else 'N/A'
         ],
         'Isolation Forest': [
             metricas_iforest['algoritmo'].values[0],
             f"{metricas_iforest['pct_anomalias'].values[0]:.2f}",
             f"{metricas_iforest['p95_minus_p50'].values[0]:.4f}",
             f"{metricas_iforest['mean_score'].values[0]:.4f}",
-            metricas_iforest['n_clusters'].values[0] if not pd.isna(metricas_iforest['n_clusters'].values[0]) else 'N/A'
+            metricas_iforest['n_clusters'].values[0] if not pd.isna(metricas_iforest['n_clusters'].values[0]) else 'N/A',
+            f"{tiempo_iforest:.2f}" if tiempo_iforest > 0 else 'N/A',
+            f"{memoria_iforest:.2f}" if memoria_iforest > 0 else 'N/A'
         ]
     }
     
@@ -165,7 +180,6 @@ def crear_tabla_comparativa_metricas(metricas_cblof: pd.DataFrame,
 
 def generar_graficos_metricas(metricas_cblof: pd.DataFrame, 
                               metricas_iforest: pd.DataFrame) -> None:
-    """Genera gráficos comparativos de métricas."""
     print("\n📈 Generando gráficos comparativos de métricas...")
     
     # Gráfico de barras comparativo
@@ -220,15 +234,11 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     plt.close()
     print(f"✅ Gráfico de barras guardado: {ruta_grafico.name}")
     
-    # Gráficos individuales de porcentaje y separación
     crear_graficos_individuales(metricas_cblof, metricas_iforest)
 
 
 def crear_graficos_individuales(metricas_cblof: pd.DataFrame, 
                                 metricas_iforest: pd.DataFrame) -> None:
-    """Crea gráficos individuales para métricas específicas."""
-    
-    # Gráfico de porcentaje de anomalías
     fig, ax = plt.subplots(figsize=(11, 7))
     
     algoritmos = ['CBLOF', 'Isolation Forest']
@@ -254,7 +264,6 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     plt.close()
     print(f"✅ Gráfico de porcentajes guardado: {ruta_porcentajes.name}")
     
-    # Gráfico de separación de scores
     fig, ax = plt.subplots(figsize=(11, 7))
     
     separaciones = [
@@ -280,11 +289,66 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     print(f"✅ Gráfico de separación guardado: {ruta_separacion.name}")
 
 
+def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> None:
+    """
+    Genera gráficos comparativos de rendimiento (tiempo y memoria).
+    """
+    print("\n⏱️  Generando gráficos de rendimiento...")
+    
+    tiempo_cblof = obtener_metrica_segura(metricas_cblof, 'tiempo_ejecucion_s', 0)
+    tiempo_iforest = obtener_metrica_segura(metricas_iforest, 'tiempo_ejecucion_s', 0)
+    memoria_cblof = obtener_metrica_segura(metricas_cblof, 'memoria_max_mb', 0)
+    memoria_iforest = obtener_metrica_segura(metricas_iforest, 'memoria_max_mb', 0)
+    
+    # Crear gráfico con 2 subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Gráfico de tiempo de ejecución
+    algoritmos = ['CBLOF', 'Isolation Forest']
+    tiempos = [tiempo_cblof, tiempo_iforest]
+    colores = ['mediumseagreen', 'mediumpurple']
+    
+    bars1 = ax1.bar(algoritmos, tiempos, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax1.set_ylabel('Tiempo (segundos)', fontsize=12, fontweight='bold')
+    ax1.set_title('Comparación de Tiempo de Ejecución', fontsize=14, fontweight='bold', pad=15)
+    ax1.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    
+    # Añadir valores sobre las barras
+    for bar, tiempo in zip(bars1, tiempos):
+        height = bar.get_height()
+        if height > 0:
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{tiempo:.2f}s',
+                    ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Gráfico de uso de memoria
+    memorias = [memoria_cblof, memoria_iforest]
+    bars2 = ax2.bar(algoritmos, memorias, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax2.set_ylabel('Memoria (MB)', fontsize=12, fontweight='bold')
+    ax2.set_title('Comparación de Uso de Memoria', fontsize=14, fontweight='bold', pad=15)
+    ax2.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    
+    # Añadir valores sobre las barras
+    for bar, memoria in zip(bars2, memorias):
+        height = bar.get_height()
+        if height > 0:
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{memoria:.2f} MB',
+                    ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    plt.suptitle('Métricas de Rendimiento: CBLOF vs Isolation Forest', 
+                fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    
+    ruta_rendimiento = DIRECTORIO_COMPARACIONES / 'comparacion_rendimiento.png'
+    plt.savefig(ruta_rendimiento, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
+
+
 def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> Dict[str, Any]:
-    """Determina el ganador basándose en las métricas."""
     analisis = {}
     
-    # Separación de scores (mayor es mejor - más crítico)
     sep_cblof = metricas_cblof['p95_minus_p50'].values[0]
     sep_iforest = metricas_iforest['p95_minus_p50'].values[0]
     
@@ -298,11 +362,10 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
         analisis['mejor_separacion'] = 'Empate'
         peso_separacion = 0
     
-    # Porcentaje de anomalías
     pct_cblof = metricas_cblof['pct_anomalias'].values[0]
     pct_iforest = metricas_iforest['pct_anomalias'].values[0]
     
-    if abs(pct_cblof - pct_iforest) > 2:  # Diferencia significativa
+    if abs(pct_cblof - pct_iforest) > 2:
         if pct_cblof > pct_iforest:
             analisis['mayor_deteccion'] = 'CBLOF'
             peso_deteccion = 1
@@ -313,7 +376,6 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
         analisis['mayor_deteccion'] = 'Empate (similar)'
         peso_deteccion = 0
     
-    # Calcular puntuación total
     puntos_cblof = 0
     puntos_iforest = 0
     
@@ -327,7 +389,6 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
     elif analisis['mayor_deteccion'] == 'Isolation Forest':
         puntos_iforest += peso_deteccion
     
-    # Determinar ganador
     if puntos_cblof > puntos_iforest:
         analisis['ganador'] = 'CBLOF'
     elif puntos_iforest > puntos_cblof:
@@ -347,7 +408,6 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
 
 def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str, Any],
                              metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> None:
-    """Guarda reporte completo de la comparación."""
     print("\n📝 Generando reporte completo...")
     
     ruta_reporte = DIRECTORIO_COMPARACIONES / 'REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt'
@@ -364,7 +424,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write(tabla_comparativa.to_string(index=False))
         f.write("\n\n")
         
-        # Análisis de resultados
         f.write("2. ANÁLISIS DE RESULTADOS POR MÉTRICA\n")
         f.write("-" * 100 + "\n")
         f.write(f"✓ Mejor Separación de Scores (P95-P50): {analisis['mejor_separacion']}\n")
@@ -375,13 +434,11 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write(f"  CBLOF: {analisis['pct_anomalias_cblof']:.2f}%\n")
         f.write(f"  Isolation Forest: {analisis['pct_anomalias_iforest']:.2f}%\n\n")
         
-        # Puntuación
         f.write("3. PUNTUACIÓN FINAL (Separación pesa doble)\n")
         f.write("-" * 100 + "\n")
         f.write(f"CBLOF: {analisis['puntos_cblof']} puntos\n")
         f.write(f"Isolation Forest: {analisis['puntos_iforest']} puntos\n\n")
         
-        # Ganador
         f.write("4. ALGORITMO GANADOR\n")
         f.write("-" * 100 + "\n")
         f.write(f"🏆 GANADOR: {analisis['ganador']}\n\n")
@@ -395,7 +452,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         
         f.write("\n")
         
-        # Características
         f.write("5. CARACTERÍSTICAS Y CONSIDERACIONES\n")
         f.write("-" * 100 + "\n\n")
         
@@ -422,7 +478,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("    ✗ Menos interpretable que métodos basados en distancia\n")
         f.write("    ✗ Puede tener problemas con distribuciones no uniformes\n\n")
         
-        # Interpretación de métricas
         f.write("6. INTERPRETACIÓN DE MÉTRICAS CLAVE\n")
         f.write("-" * 100 + "\n")
         f.write("Separación de Scores (P95-P50):\n")
@@ -437,7 +492,27 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("  • No necesariamente 'más es mejor'\n")
         f.write("  • Ideal: coincide con la tasa real esperada de anomalías\n\n")
         
-        # Archivos generados
+        tiempo_cblof = obtener_metrica_segura(metricas_cblof, 'tiempo_ejecucion_s', 0)
+        tiempo_iforest = obtener_metrica_segura(metricas_iforest, 'tiempo_ejecucion_s', 0)
+        memoria_cblof = obtener_metrica_segura(metricas_cblof, 'memoria_max_mb', 0)
+        memoria_iforest = obtener_metrica_segura(metricas_iforest, 'memoria_max_mb', 0)
+        
+        if tiempo_cblof > 0 or tiempo_iforest > 0 or memoria_cblof > 0 or memoria_iforest > 0:
+            f.write("Métricas de Rendimiento:\n")
+            if tiempo_cblof > 0 and tiempo_iforest > 0:
+                f.write(f"  Tiempo de Ejecución:\n")
+                f.write(f"    CBLOF: {tiempo_cblof:.2f}s\n")
+                f.write(f"    Isolation Forest: {tiempo_iforest:.2f}s\n")
+                mas_rapido = "Isolation Forest" if tiempo_iforest < tiempo_cblof else "CBLOF"
+                f.write(f"    ⚡ {mas_rapido} es más rápido\n\n")
+            
+            if memoria_cblof > 0 and memoria_iforest > 0:
+                f.write(f"  Uso de Memoria Máxima:\n")
+                f.write(f"    CBLOF: {memoria_cblof:.2f} MB\n")
+                f.write(f"    Isolation Forest: {memoria_iforest:.2f} MB\n")
+                menos_memoria = "Isolation Forest" if memoria_iforest < memoria_cblof else "CBLOF"
+                f.write(f"    💾 {menos_memoria} usa menos memoria\n\n")
+        
         f.write("7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN\n")
         f.write("-" * 100 + "\n")
         f.write("  • comparacion_visual_scores.png - Comparación de distribución de scores\n")
@@ -445,6 +520,7 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("  • comparacion_metricas_barras.png - Gráfico de barras comparativo\n")
         f.write("  • comparacion_porcentaje_anomalias.png - Comparación de porcentajes\n")
         f.write("  • comparacion_separacion_scores.png - Comparación de separación\n")
+        f.write("  • comparacion_rendimiento.png - Gráfico de rendimiento (tiempo y memoria)\n")
         f.write("  • tabla_comparativa.csv - Tabla de métricas en formato CSV\n")
         f.write("  • REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt - Este archivo\n\n")
         
@@ -455,47 +531,67 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
     print(f"✅ Reporte completo guardado: {ruta_reporte.name}")
 
 
+def validar_scores_normalizados() -> None:
+    """
+    Valida que los anomaly scores estén normalizados en el rango [0, 1].
+    """
+    for algoritmo, rutas in RUTAS.items():
+        scores_csv = rutas['scores_csv']
+        if scores_csv.exists():
+            try:
+                df_scores = pd.read_csv(scores_csv)
+                if 'anomaly_score' in df_scores.columns:
+                    scores = df_scores['anomaly_score'].values
+                    min_score = np.min(scores)
+                    max_score = np.max(scores)
+                    
+                    if min_score < -0.01 or max_score > 1.01:  # Pequeña tolerancia por redondeo
+                        print(f"⚠️  ADVERTENCIA: Scores de {algoritmo} NO están completamente normalizados")
+                        print(f"   Rango: [{min_score:.4f}, {max_score:.4f}]")
+                    else:
+                        print(f"✅ {algoritmo}: Scores normalizados correctamente [0, 1]")
+            except Exception as e:
+                print(f"❌ Error al validar scores de {algoritmo}: {e}")
+
+
 def main():
-    """Función principal del script de comparación."""
     print("=" * 100)
     print(" " * 18 + "COMPARACIÓN DE ALGORITMOS DE DETECCIÓN DE ANOMALÍAS")
     print(" " * 35 + "CBLOF vs Isolation Forest")
     print("=" * 100)
     
-    # Verificar archivos
     if not verificar_archivos():
         return
     
     print("\n✅ Todos los archivos necesarios están presentes.")
     
-    # Cargar métricas
     print("\n📂 Cargando métricas...")
     metricas_cblof, metricas_iforest = cargar_metricas()
     print("✅ Métricas cargadas correctamente.")
     
-    # Crear comparaciones visuales
     crear_comparacion_imagenes_lado_a_lado()
     
-    # Crear tabla comparativa
     print("\n📋 Generando tabla comparativa...")
     tabla_comparativa = crear_tabla_comparativa_metricas(metricas_cblof, metricas_iforest)
     print("\n" + tabla_comparativa.to_string(index=False))
     
-    # Guardar tabla
     ruta_tabla_csv = DIRECTORIO_COMPARACIONES / 'tabla_comparativa.csv'
     tabla_comparativa.to_csv(ruta_tabla_csv, index=False, encoding='utf-8')
     print(f"\n✅ Tabla guardada: {ruta_tabla_csv.name}")
     
-    # Generar gráficos de métricas
     generar_graficos_metricas(metricas_cblof, metricas_iforest)
     
-    # Analizar ganador
+    crear_grafico_rendimiento(metricas_cblof, metricas_iforest)
+    
+    # Validar que los scores estén normalizados
+    print("\n🔍 Validando normalización de scores...")
+    validar_scores_normalizados()
+    
     print("\n🔍 Analizando resultados...")
     analisis = analizar_ganador(metricas_cblof, metricas_iforest)
     print(f"\n🏆 ALGORITMO GANADOR: {analisis['ganador']}")
     print(f"   Puntuación: CBLOF {analisis['puntos_cblof']} - Isolation Forest {analisis['puntos_iforest']}")
     
-    # Guardar reporte completo
     guardar_reporte_completo(tabla_comparativa, analisis, metricas_cblof, metricas_iforest)
     
     print("\n" + "=" * 100)

@@ -1,11 +1,7 @@
-"""
-Módulo para clustering DBSCAN con optimización automática de parámetros.
-Incluye preprocesamiento, búsqueda de parámetros óptimos, visualización y detección de anomalías.
-"""
-
 import numpy as np
 import pandas as pd
 import os
+import sys
 import matplotlib.pyplot as plt
 import warnings
 from sklearn.cluster import DBSCAN
@@ -21,52 +17,51 @@ import logging
 import gc
 from joblib import Parallel, delayed
 from typing import Dict, List, Optional, Tuple, Any
+import time
+import tracemalloc
+import random
 
-# Configuración de warnings
+# Importar configuración centralizada
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+import config
+
 warnings.filterwarnings('ignore')
 plt.style.use('default')
 
-# Constantes optimizadas (100% no-supervisado)
-USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
-CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
+# Usar constantes del config centralizado
+USECOLS = config.USECOLS
+CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
 MIN_CLUSTERS_VALIDOS = 2
-N_JOBS_PARALELO = 1  # Secuencial para evitar problemas de memoria
+N_JOBS_PARALELO = config.N_JOBS_PARALELO
 FORMATO_METRICAS = '.4f'
-MAX_MUESTRAS_OPTIMIZACION = 8000   # Reducido aún más para velocidad
-MAX_MUESTRAS_VISUALIZATION = 8000  # Muestreo para visualización
-SCATTER_SIZE = 15  # Reducido para mejor rendimiento visual
+MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION
+MAX_MUESTRAS_VISUALIZATION = config.MAX_MUESTRAS_VISUALIZATION
+SCATTER_SIZE = config.SCATTER_SIZE_NORMAL
+SCATTER_SIZE_NOISE = config.SCATTER_SIZE_NOISE
+CMAP_CLUSTERING = config.CMAP_CLUSTERING
+RANDOM_STATE = config.RANDOM_STATE
+BATCH_SIZE = config.BATCH_SIZE
 
 class ConfiguradorLogging:
-    """Configurador del sistema de logging."""
     
     @staticmethod
     def configurar_logging(directorio_metricas: str) -> None:
-        """
-        Configura el sistema de logging para archivo y consola.
-        
-        Args:
-            directorio_metricas: Directorio donde guardar el archivo de log.
-        """
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
         
-        # Limpiar handlers existentes
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         
-        # Handler para archivo
         ruta_archivo_log = os.path.join(directorio_metricas, 'output.log')
         file_handler = logging.FileHandler(ruta_archivo_log, mode='w')
         file_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(file_handler)
         
-        # Handler para consola
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(console_handler)
 
 class GestorDirectorios:
-    """Gestor de directorios del proyecto."""
     
     def __init__(self, directorio_base: str):
         self.directorio_base = directorio_base
@@ -75,34 +70,18 @@ class GestorDirectorios:
         self.directorio_metricas = os.path.join(directorio_base, 'metricas_DBSCAN')
     
     def crear_directorios(self) -> None:
-        """Crea todos los directorios necesarios."""
         directorios = [self.directorio_modelos, self.directorio_graficas, self.directorio_metricas]
         for directorio in directorios:
             os.makedirs(directorio, exist_ok=True)
 
 class ProcesadorDatos:
-    """Procesador y transformador de datos."""
     
     @staticmethod
     def cargar_datos(ruta_archivo: str) -> pd.DataFrame:
-        """
-        Carga los datos desde un archivo CSV (100% no-supervisado).
-        
-        Args:
-            ruta_archivo: Ruta al archivo CSV.
-            
-        Returns:
-            DataFrame con los datos cargados.
-            
-        Raises:
-            FileNotFoundError: Si el archivo no existe.
-            ValueError: Si el archivo está vacío o tiene formato incorrecto.
-        """
         if not os.path.exists(ruta_archivo):
             raise FileNotFoundError(f"El archivo {ruta_archivo} no existe")
         
         try:
-            # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
             try:
                 datos = pd.read_csv(
                     ruta_archivo, 
@@ -162,22 +141,15 @@ class ProcesadorDatos:
             else:
                 logging.info(f"  - No se encontraron valores faltantes")
             
+            # Validar datos de entrada usando función centralizada
+            config.validar_datos_entrada(datos, CARACTERISTICAS_BASE)
+            
             return datos
         except Exception as e:
             raise ValueError(f"Error al cargar el archivo CSV: {str(e)}")
     
     @staticmethod
     def validar_caracteristicas(datos: pd.DataFrame, caracteristicas: List[str]) -> None:
-        """
-        Valida que las características requeridas estén presentes en los datos.
-        
-        Args:
-            datos: DataFrame con los datos.
-            caracteristicas: Lista de características requeridas.
-            
-        Raises:
-            ValueError: Si faltan características requeridas.
-        """
         caracteristicas_faltantes = [col for col in caracteristicas if col not in datos.columns]
         if caracteristicas_faltantes:
             raise ValueError(f"Características faltantes: {caracteristicas_faltantes}")
@@ -243,15 +215,6 @@ class ProcesadorDatos:
     
     @staticmethod
     def escalar_datos(X: np.ndarray) -> Tuple[np.ndarray, StandardScaler]:
-        """
-        Escala los datos usando StandardScaler.
-        
-        Args:
-            X: Matriz de características.
-            
-        Returns:
-            Tupla con (datos_escalados, escalador).
-        """
         escalador = StandardScaler()
         X_escalado = escalador.fit_transform(X)
         logging.info("Datos escalados correctamente")
@@ -259,21 +222,12 @@ class ProcesadorDatos:
     
     @staticmethod
     def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = MAX_MUESTRAS_OPTIMIZACION) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Reduce el tamaño de la muestra para optimización de parámetros si es muy grande.
-        
-        Args:
-            X: Matriz de características completa.
-            max_muestras: Número máximo de muestras para optimización.
-            
-        Returns:
-            Tupla con (muestra_reducida, indices_seleccionados).
-        """
         if len(X) <= max_muestras:
             return X, np.arange(len(X))
         
-        # Muestreo aleatorio estratificado
-        np.random.seed(42)  # Para reproducibilidad
+        # Aplicar seeds consistentemente
+        config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
+        
         indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
         indices_seleccionados = np.sort(indices_seleccionados)
         
@@ -284,21 +238,12 @@ class ProcesadorDatos:
     
     @staticmethod
     def reducir_muestra_para_visualizacion(X: np.ndarray, etiquetas: np.ndarray, max_muestras: int = MAX_MUESTRAS_VISUALIZATION) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Reduce el tamaño de la muestra para visualización si es muy grande.
-        
-        Args:
-            X: Matriz de características completa.
-            etiquetas: Etiquetas de clusters.
-            max_muestras: Número máximo de muestras para visualización.
-            
-        Returns:
-            Tupla con (muestra_reducida, etiquetas_reducidas).
-        """
         if len(X) <= max_muestras:
             return X, etiquetas
         
-        np.random.seed(42)
+        # Aplicar seeds consistentemente
+        config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
+        
         indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
         indices_seleccionados = np.sort(indices_seleccionados)
         
@@ -309,18 +254,9 @@ class ProcesadorDatos:
         return X_reducido, etiquetas_reducidas
 
 class AnalizadorDistancias:
-    """Analizador de distancias para estimar parámetros de DBSCAN."""
     
     @staticmethod
     def generar_grafica_k_distancias(X_escalado: np.ndarray, directorio_graficas: str, k: int = 5) -> None:
-        """
-        Genera la gráfica de k-distancias para estimar el parámetro eps.
-        
-        Args:
-            X_escalado: Datos escalados.
-            directorio_graficas: Directorio donde guardar la gráfica.
-            k: Número de vecinos más cercanos.
-        """
         try:
             vecinos = NearestNeighbors(n_neighbors=k)
             vecinos_ajustados = vecinos.fit(X_escalado)
@@ -343,25 +279,11 @@ class AnalizadorDistancias:
             logging.error(f"Error al generar gráfica de k-distancias: {str(e)}")
 
 class OptimizadorDBSCAN:
-    """Optimizador de parámetros para DBSCAN."""
     
     @staticmethod
     def generar_grilla_parametros(eps_min: float = 0.2, eps_max: float = 1.5, 
                                  n_eps: int = 4, min_samples_min: int = 3, 
                                  min_samples_max: int = 4) -> List[Dict[str, Any]]:
-        """
-        Genera la grilla de parámetros para la búsqueda.
-        
-        Args:
-            eps_min: Valor mínimo de eps.
-            eps_max: Valor máximo de eps.
-            n_eps: Número de valores de eps a probar (reducido para optimización de memoria).
-            min_samples_min: Valor mínimo de min_samples.
-            min_samples_max: Valor máximo de min_samples (reducido para optimización de memoria).
-            
-        Returns:
-            Lista de diccionarios con combinaciones de parámetros.
-        """
         valores_eps = np.linspace(eps_min, eps_max, n_eps)
         valores_min_samples = range(min_samples_min, min_samples_max + 1)
         
@@ -373,16 +295,6 @@ class OptimizadorDBSCAN:
     
     @staticmethod
     def evaluar_parametros_dbscan(parametros: Dict[str, Any], X_escalado: np.ndarray) -> Optional[Dict[str, Any]]:
-        """
-        Evalúa una combinación específica de parámetros para DBSCAN.
-        
-        Args:
-            parametros: Diccionario con parámetros eps y min_samples.
-            X_escalado: Datos escalados.
-            
-        Returns:
-            Diccionario con resultados de la evaluación o None si no es válida.
-        """
         try:
             eps = parametros['eps']
             min_samples = parametros['min_samples']
@@ -393,11 +305,9 @@ class OptimizadorDBSCAN:
             n_clusters = len(set(etiquetas)) - (1 if -1 in etiquetas else 0)
             n_ruido = list(etiquetas).count(-1)
             
-            # Validar si hay suficientes clusters
             if n_clusters < MIN_CLUSTERS_VALIDOS:
                 return None
             
-            # Calcular métricas excluyendo ruido
             mascara_sin_ruido = etiquetas != -1
             if np.sum(mascara_sin_ruido) < MIN_CLUSTERS_VALIDOS:
                 return None
@@ -425,45 +335,28 @@ class OptimizadorDBSCAN:
     
     @staticmethod
     def buscar_mejores_parametros(X_escalado: np.ndarray, grilla_parametros: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Busca los mejores parámetros usando búsqueda optimizada para memoria.
-        
-        Args:
-            X_escalado: Datos escalados.
-            grilla_parametros: Lista de combinaciones de parámetros.
-            
-        Returns:
-            Diccionario con el mejor resultado.
-            
-        Raises:
-            ValueError: Si no se encuentran parámetros válidos.
-        """
         logging.info(f"Iniciando búsqueda de mejores parámetros...")
         logging.info(f"Total de combinaciones a evaluar: {len(grilla_parametros)}")
         logging.info(f"Tamaño de datos para optimización: {X_escalado.shape}")
         logging.info(f"Número de trabajos paralelos: {N_JOBS_PARALELO}")
         
         if N_JOBS_PARALELO == 1:
-            # Búsqueda secuencial para evitar problemas de memoria
             logging.info("Ejecutando búsqueda secuencial para optimizar memoria...")
             resultados = []
             for i, params in enumerate(grilla_parametros):
-                if i % 5 == 0:  # Log progreso cada 5 iteraciones
+                if i % 5 == 0:
                     logging.info(f"Evaluando combinación {i+1}/{len(grilla_parametros)}: {params}")
                 resultado = OptimizadorDBSCAN.evaluar_parametros_dbscan(params, X_escalado)
                 resultados.append(resultado)
                 
-                # Forzar liberación de memoria cada 10 iteraciones
                 if i % 10 == 0:
                     gc.collect()
         else:
-            # Búsqueda paralela (solo si n_jobs > 1)
             resultados = Parallel(n_jobs=N_JOBS_PARALELO)(
                 delayed(OptimizadorDBSCAN.evaluar_parametros_dbscan)(params, X_escalado) 
                 for params in grilla_parametros
             )
         
-        # Filtrar resultados válidos
         resultados_validos = [res for res in resultados if res is not None]
         
         logging.info(f"Combinaciones válidas encontradas: {len(resultados_validos)}/{len(grilla_parametros)}")
@@ -471,7 +364,6 @@ class OptimizadorDBSCAN:
         if not resultados_validos:
             raise ValueError("No se encontraron parámetros que generen clusters válidos")
         
-        # Seleccionar el mejor basado en silhouette score
         mejor_resultado = max(resultados_validos, key=lambda x: x['silhouette'])
         
         logging.info(f"Mejor resultado encontrado:")
@@ -481,47 +373,44 @@ class OptimizadorDBSCAN:
         return mejor_resultado
 
 class VisualizadorClusters:
-    """Visualizador de clusters y resultados."""
     
     @staticmethod
     def visualizar_clusters_2d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
                               directorio_graficas: str, titulo: str = "Clustering DBSCAN (2D)") -> None:
-        """
-        Visualiza clusters en 2D usando PCA - OPTIMIZADA.
-        
-        Args:
-            X_escalado: Datos escalados.
-            etiquetas: Etiquetas de clusters.
-            directorio_graficas: Directorio donde guardar la gráfica.
-            titulo: Título de la gráfica.
-        """
         try:
-            pca = PCA(n_components=2)
+            pca = PCA(n_components=2, random_state=RANDOM_STATE)
             X_pca = pca.fit_transform(X_escalado)
             
-            # Aplicar muestreo para visualización si es necesario
             X_vis, etiquetas_vis = ProcesadorDatos.reducir_muestra_para_visualizacion(X_pca, etiquetas)
             
-            etiquetas_unicas = set(etiquetas_vis)
-            colores = plt.cm.Spectral(np.linspace(0, 1, len(etiquetas_unicas)))
+            n_clusters = len(set(etiquetas_vis)) - (1 if -1 in etiquetas_vis else 0)
+            n_ruido = np.sum(etiquetas_vis == -1)
             
-            plt.figure(figsize=(12, 8))
+            etiquetas_unicas = set(etiquetas_vis)
+            # Usar colormap consistente
+            colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
+            
+            plt.figure(figsize=config.FIGSIZE_2D)
             for etiqueta, color in zip(etiquetas_unicas, colores):
                 mascara = etiquetas_vis == etiqueta
                 puntos = X_vis[mascara]
                 
                 if etiqueta == -1:
                     plt.scatter(puntos[:, 0], puntos[:, 1], c='black', marker='x', 
-                              s=SCATTER_SIZE + 15, alpha=0.7, label='Ruido')
+                              s=SCATTER_SIZE_NOISE, alpha=0.7, label='Ruido')
                 else:
                     plt.scatter(puntos[:, 0], puntos[:, 1], c=[color], marker='o', 
                               s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            plt.title(titulo, fontsize=14)
+            # Título mejorado con información clave
+            plt.title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
+                     fontsize=14, pad=15)
             plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
             plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-            plt.grid(True, alpha=0.3)
+            
+            # Grid consistente
+            plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
             
             ruta_grafica = os.path.join(directorio_graficas, 'clusters_2d_pca.png')
             plt.savefig(ruta_grafica, dpi=300, bbox_inches='tight')
@@ -534,26 +423,20 @@ class VisualizadorClusters:
     @staticmethod
     def visualizar_clusters_3d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
                               directorio_graficas: str, titulo: str = "Clustering DBSCAN (3D)") -> None:
-        """
-        Visualiza clusters en 3D usando PCA - OPTIMIZADA.
-        
-        Args:
-            X_escalado: Datos escalados.
-            etiquetas: Etiquetas de clusters.
-            directorio_graficas: Directorio donde guardar la gráfica.
-            titulo: Título de la gráfica.
-        """
         try:
-            pca_3d = PCA(n_components=3)
+            pca_3d = PCA(n_components=3, random_state=RANDOM_STATE)
             X_pca_3d = pca_3d.fit_transform(X_escalado)
             
-            # Aplicar muestreo para visualización si es necesario
             X_vis, etiquetas_vis = ProcesadorDatos.reducir_muestra_para_visualizacion(X_pca_3d, etiquetas)
             
-            etiquetas_unicas = set(etiquetas_vis)
-            colores = plt.cm.Spectral(np.linspace(0, 1, len(etiquetas_unicas)))
+            n_clusters = len(set(etiquetas_vis)) - (1 if -1 in etiquetas_vis else 0)
+            n_ruido = np.sum(etiquetas_vis == -1)
             
-            fig = plt.figure(figsize=(12, 9))
+            etiquetas_unicas = set(etiquetas_vis)
+            # Usar colormap consistente
+            colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
+            
+            fig = plt.figure(figsize=config.FIGSIZE_3D)
             ax = fig.add_subplot(111, projection='3d')
             
             for etiqueta, color in zip(etiquetas_unicas, colores):
@@ -562,24 +445,24 @@ class VisualizadorClusters:
                 
                 if etiqueta == -1:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
-                             c='black', marker='x', s=SCATTER_SIZE + 15, alpha=0.7, label='Ruido')
+                             c='black', marker='x', s=SCATTER_SIZE_NOISE, alpha=0.7, label='Ruido')
                 else:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
                              c=[color], marker='o', s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            ax.set_title(titulo, fontsize=14)
+            # Título mejorado con información clave
+            ax.set_title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
+                        fontsize=14, pad=15)
             ax.set_xlabel(f'PC1 (Var: {pca_3d.explained_variance_ratio_[0]:.2%})')
             ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
             ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
             
-            # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
-            # Calcular rangos de datos
-            x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+            # Corrección de proporciones
+            x_range = np.ptp(X_vis[:, 0])
             y_range = np.ptp(X_vis[:, 1])
             z_range = np.ptp(X_vis[:, 2])
             max_range = max(x_range, y_range, z_range)
             
-            # Centrar y escalar los ejes
             x_center = np.mean(X_vis[:, 0])
             y_center = np.mean(X_vis[:, 1])
             z_center = np.mean(X_vis[:, 2])
@@ -588,8 +471,10 @@ class VisualizadorClusters:
             ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
             ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
             
-            # Configurar aspecto igual
             ax.set_box_aspect([1,1,1])
+            
+            # Ángulo de vista optimizado
+            ax.view_init(elev=config.VIEW_ELEV, azim=config.VIEW_AZIM)
             
             ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
             
@@ -602,17 +487,9 @@ class VisualizadorClusters:
             logging.error(f"Error en visualización 3D: {str(e)}")
 
 class GuardadorModelos:
-    """Guardador de modelos y resultados."""
     
     @staticmethod
     def guardar_modelo_pkl(modelo: DBSCAN, ruta_archivo: str) -> None:
-        """
-        Guarda el modelo en formato pickle.
-        
-        Args:
-            modelo: Modelo DBSCAN entrenado.
-            ruta_archivo: Ruta donde guardar el archivo.
-        """
         try:
             joblib.dump(modelo, ruta_archivo)
             logging.info(f"Modelo guardado en formato pickle: {ruta_archivo}")
@@ -621,13 +498,6 @@ class GuardadorModelos:
     
     @staticmethod
     def guardar_modelo_h5(modelo: DBSCAN, ruta_archivo: str) -> None:
-        """
-        Guarda los parámetros del modelo en formato HDF5.
-        
-        Args:
-            modelo: Modelo DBSCAN entrenado.
-            ruta_archivo: Ruta donde guardar el archivo.
-        """
         try:
             with h5py.File(ruta_archivo, 'w') as archivo_h5:
                 if hasattr(modelo, 'components_') and modelo.components_ is not None:
@@ -643,13 +513,6 @@ class GuardadorModelos:
     
     @staticmethod
     def guardar_metricas(metricas: Dict[str, Any], ruta_archivo: str) -> None:
-        """
-        Guarda las métricas en un archivo de texto.
-        
-        Args:
-            metricas: Diccionario con las métricas.
-            ruta_archivo: Ruta donde guardar el archivo.
-        """
         try:
             with open(ruta_archivo, 'w', encoding='utf-8') as archivo:
                 archivo.write("=== RESULTADOS CLUSTERING DBSCAN ===\n\n")
@@ -669,82 +532,61 @@ class GuardadorModelos:
             logging.error(f"Error guardando métricas: {str(e)}")
 
 class DetectorAnomalias:
-    """Detector y analizador de anomalías."""
     
     @staticmethod
     def calcular_scores_todos_los_puntos(etiquetas: np.ndarray, X_escalado: np.ndarray, 
                                        modelo: DBSCAN) -> np.ndarray:
-        """
-        Calcula scores de anomalía para todos los puntos.
-        
-        Args:
-            etiquetas: Etiquetas de clusters
-            X_escalado: Datos escalados
-            modelo: Modelo DBSCAN entrenado
-            
-        Returns:
-            Array con scores de anomalía para todos los puntos
-        """
         scores = np.zeros(len(etiquetas))
         
         if hasattr(modelo, 'core_sample_indices_') and len(modelo.core_sample_indices_) > 0:
-            # OPTIMIZACIÓN CRÍTICA: Usar NearestNeighbors en lugar de pairwise_distances
-            # para evitar colapso de memoria con 500k puntos
             from sklearn.neighbors import NearestNeighbors
             indices_nucleo = modelo.core_sample_indices_
             
-            # Crear modelo de vecinos más cercanos con puntos núcleo
             nn_model = NearestNeighbors(n_neighbors=1, metric='euclidean')
             nn_model.fit(X_escalado[indices_nucleo])
             
-            # Calcular distancia mínima a punto núcleo más cercano
-            distancias_minimas, _ = nn_model.kneighbors(X_escalado)
-            distancias_minimas = distancias_minimas.flatten()
+            # Batching para datasets muy grandes (> 50k puntos)
+            if len(X_escalado) > BATCH_SIZE:
+                logging.info(f"Dataset grande detectado ({len(X_escalado)} puntos), usando procesamiento por batches...")
+                scores_list = []
+                for i in range(0, len(X_escalado), BATCH_SIZE):
+                    batch = X_escalado[i:i+BATCH_SIZE]
+                    dist, _ = nn_model.kneighbors(batch)
+                    scores_list.append(dist.flatten())
+                distancias_minimas = np.concatenate(scores_list)
+            else:
+                distancias_minimas, _ = nn_model.kneighbors(X_escalado)
+                distancias_minimas = distancias_minimas.flatten()
             
-            # Para puntos de ruido: distancia mínima a núcleos (alta = más anómalo)
-            # Para puntos núcleo: distancia = 0 (menos anómalo)
-            # Para puntos frontera: distancia baja a núcleos (menos anómalo que ruido)
             scores = distancias_minimas
-            
-            # Asignar score especial a puntos núcleo (score mínimo)
             scores[indices_nucleo] = 0.0
         else:
-            # Si no hay puntos núcleo, asignar scores basados en etiquetas
-            scores[etiquetas == -1] = 1.0  # Ruido = score alto
-            scores[etiquetas != -1] = 0.0  # Clusters = score bajo
+            scores[etiquetas == -1] = 1.0
+            scores[etiquetas != -1] = 0.0
         
-        return scores
+        # Normalizar scores al rango [0, 1] usando función centralizada
+        scores_normalizados = config.normalizar_scores_min_max(scores)
+        
+        return scores_normalizados
     
     @staticmethod
     def identificar_anomalias(datos: pd.DataFrame, etiquetas: np.ndarray, 
                             X_escalado: np.ndarray, modelo: DBSCAN, 
-                            directorio_metricas: str) -> None:
-        """
-        Identifica y guarda las anomalías detectadas.
-        
-        Args:
-            datos: DataFrame con los datos originales.
-            etiquetas: Etiquetas de clusters.
-            X_escalado: Datos escalados.
-            modelo: Modelo DBSCAN entrenado.
-            directorio_metricas: Directorio donde guardar los resultados.
-        """
+                            directorio_metricas: str, tiempo_total: float = 0.0, 
+                            memoria_max: float = 0.0) -> None:
         try:
-            # Calcular scores para todos los puntos
             anomaly_scores = DetectorAnomalias.calcular_scores_todos_los_puntos(etiquetas, X_escalado, modelo)
             
-            # Crear DataFrame con todos los datos y scores
             datos_con_scores = datos.copy()
             datos_con_scores['anomaly_score'] = anomaly_scores
             datos_con_scores['is_outlier'] = (etiquetas == -1).astype(int)
             datos_con_scores['cluster_id'] = etiquetas
             
-            # Guardar todos los datos con scores
-            ruta_scores = os.path.join(directorio_metricas, 'scores_dbscan.csv')
+            # Cambiar nombre de archivo a 'anomaly_scores.csv' (estandarización)
+            ruta_scores = os.path.join(directorio_metricas, 'anomaly_scores.csv')
             datos_con_scores.to_csv(ruta_scores, index=False)
             logging.info(f"Scores de todos los puntos guardados en: {ruta_scores}")
             
-            # Guardar métricas estandarizadas en CSV para comparación (100% no-supervisado)
             ruta_metricas_csv = os.path.join(directorio_metricas, 'metrics.csv')
             metricas_df = pd.DataFrame([{
                 'algoritmo': 'DBSCAN',
@@ -755,10 +597,11 @@ class DetectorAnomalias:
                 'davies_bouldin_score': None,
                 'pct_anomalias': np.mean(etiquetas == -1) * 100,
                 'p95_minus_p50': np.percentile(anomaly_scores, 95) - np.percentile(anomaly_scores, 50),
-                'mean_score': np.mean(anomaly_scores)
+                'mean_score': np.mean(anomaly_scores),
+                'tiempo_ejecucion_s': tiempo_total,
+                'memoria_max_mb': memoria_max
             }])
             
-            # Calcular métricas de clustering si hay clusters válidos
             mascara_sin_ruido = etiquetas != -1
             if np.sum(mascara_sin_ruido) >= 10 and len(set(etiquetas[mascara_sin_ruido])) >= 2:
                 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
@@ -772,14 +615,12 @@ class DetectorAnomalias:
             metricas_df.to_csv(ruta_metricas_csv, index=False)
             logging.info(f"Métricas CSV guardadas en: {ruta_metricas_csv}")
                     
-            # Identificar anomalías (ruido)
             anomalias = datos_con_scores[etiquetas == -1].copy()
             
             if len(anomalias) == 0:
                 logging.info("No se detectaron anomalías")
                 return
             
-            # Guardar solo anomalías ordenadas por score
             anomalias_ordenadas = anomalias.sort_values('anomaly_score', ascending=False)
             ruta_anomalias = os.path.join(directorio_metricas, 'anomalies.csv')
             anomalias_ordenadas.to_csv(ruta_anomalias, index=False)
@@ -793,13 +634,12 @@ class DetectorAnomalias:
             logging.error(f"Error identificando anomalías: {str(e)}")
 
 
-    
-
-
 def main():
-    """Función principal que ejecuta todo el pipeline de clustering DBSCAN."""
+    # Iniciar tracking de tiempo y memoria
+    tiempo_inicio = time.time()
+    tracemalloc.start()
+    
     try:
-        # Configuración inicial
         directorio_script = os.path.dirname(os.path.abspath(__file__))
         gestor_directorios = GestorDirectorios(directorio_script)
         gestor_directorios.crear_directorios()
@@ -808,7 +648,9 @@ def main():
         ConfiguradorLogging.configurar_logging(gestor_directorios.directorio_metricas)
         logging.info("=== INICIANDO PROCESO DE CLUSTERING DBSCAN ===")
         
-        # Cargar y procesar datos
+        # Aplicar seeds para reproducibilidad
+        config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
+        
         ruta_datos = os.path.join(directorio_script, 'data.csv')
         datos_originales = ProcesadorDatos.cargar_datos(ruta_datos)
         logging.info(f"Datos cargados: {len(datos_originales)} filas")
@@ -816,28 +658,22 @@ def main():
         datos_procesados, matriz_caracteristicas = ProcesadorDatos.preprocesar_datos(datos_originales)
         X_escalado, escalador = ProcesadorDatos.escalar_datos(matriz_caracteristicas)
         
-        # Generar gráfica de k-distancias
         AnalizadorDistancias.generar_grafica_k_distancias(X_escalado, gestor_directorios.directorio_graficas)
         
-        # Reducir muestra para optimización si es muy grande (para evitar problemas de memoria)
         X_para_optimizacion, indices_muestra = ProcesadorDatos.reducir_muestra_para_optimizacion(X_escalado)
         
-        # Optimizar parámetros usando la muestra reducida
         grilla_parametros = OptimizadorDBSCAN.generar_grilla_parametros()
         mejor_resultado = OptimizadorDBSCAN.buscar_mejores_parametros(X_para_optimizacion, grilla_parametros)
         
-        # Aplicar los mejores parámetros al dataset completo
         mejores_parametros = mejor_resultado['parametros']
         logging.info(f"Aplicando mejores parámetros al dataset completo...")
         
         modelo_final = DBSCAN(eps=mejores_parametros['eps'], min_samples=mejores_parametros['min_samples'])
         etiquetas_finales = modelo_final.fit_predict(X_escalado)
         
-        # Recalcular métricas para el dataset completo
         n_clusters_final = len(set(etiquetas_finales)) - (1 if -1 in etiquetas_finales else 0)
         n_ruido_final = list(etiquetas_finales).count(-1)
         
-        # Calcular métricas excluyendo ruido para el dataset completo
         mascara_sin_ruido = etiquetas_finales != -1
         if np.sum(mascara_sin_ruido) >= MIN_CLUSTERS_VALIDOS:
             X_sin_ruido = X_escalado[mascara_sin_ruido]
@@ -851,7 +687,6 @@ def main():
             calinski_harabasz_final = mejor_resultado['calinski_harabasz']
             davies_bouldin_final = mejor_resultado['davies_bouldin']
         
-        # Crear diccionario de métricas usando los resultados del dataset completo
         metricas = {
             'eps': mejores_parametros['eps'],
             'min_samples': mejores_parametros['min_samples'],
@@ -862,7 +697,6 @@ def main():
             'davies_bouldin': davies_bouldin_final
         }
         
-        # Mostrar resultados
         logging.info(f"\n=== MEJORES RESULTADOS ===")
         logging.info(f"Parámetros óptimos: eps={metricas['eps']:.3f}, min_samples={metricas['min_samples']}")
         logging.info(f"Clusters encontrados: {metricas['n_clusters']}")
@@ -871,15 +705,12 @@ def main():
         logging.info(f"Calinski-Harabasz: {metricas['calinski_harabasz']:{FORMATO_METRICAS}}")
         logging.info(f"Davies-Bouldin: {metricas['davies_bouldin']:{FORMATO_METRICAS}}")
         
-        # Guardar métricas
         ruta_metricas = os.path.join(gestor_directorios.directorio_metricas, 'metrics.txt')
         GuardadorModelos.guardar_metricas(metricas, ruta_metricas)
         
-        # Guardar modelos
         ruta_modelo_pkl = os.path.join(gestor_directorios.directorio_modelos, 'dbscan_model.pkl')
         GuardadorModelos.guardar_modelo_pkl(modelo_final, ruta_modelo_pkl)
         
-        # Guardar escalador para inferencia futura
         ruta_escalador = os.path.join(gestor_directorios.directorio_modelos, 'scaler.pkl')
         joblib.dump(escalador, ruta_escalador)
         logging.info(f"Escalador guardado en {ruta_escalador}")
@@ -887,16 +718,25 @@ def main():
         ruta_modelo_h5 = os.path.join(gestor_directorios.directorio_modelos, 'dbscan_model.h5')
         GuardadorModelos.guardar_modelo_h5(modelo_final, ruta_modelo_h5)
         
-        # Visualizar resultados
+        # Calcular métricas de rendimiento
+        tiempo_total = time.time() - tiempo_inicio
+        memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
+        memoria_max = memoria_pico / 1024**2  # Convertir a MB
+        tracemalloc.stop()
+        
+        logging.info(f"⏱️  Tiempo total de ejecución: {tiempo_total:.2f} segundos")
+        logging.info(f"💾 Memoria máxima utilizada: {memoria_max:.2f} MB")
+        
         VisualizadorClusters.visualizar_clusters_2d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
         VisualizadorClusters.visualizar_clusters_3d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
         
-        # Detectar anomalías
-        DetectorAnomalias.identificar_anomalias(datos_procesados, etiquetas_finales, X_escalado, modelo_final, gestor_directorios.directorio_metricas)
+        DetectorAnomalias.identificar_anomalias(datos_procesados, etiquetas_finales, X_escalado, modelo_final, 
+                                               gestor_directorios.directorio_metricas, tiempo_total, memoria_max)
         
         logging.info("\n=== PROCESO COMPLETADO EXITOSAMENTE ===")
         
     except Exception as e:
+        tracemalloc.stop()
         logging.error(f"Error en el proceso principal: {str(e)}")
         raise
 

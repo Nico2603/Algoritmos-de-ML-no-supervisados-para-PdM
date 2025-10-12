@@ -2,15 +2,15 @@
 
 ## 📋 Descripción
 
-Esta carpeta contiene el script de comparación exhaustiva entre CBLOF e Isolation Forest, generando análisis visuales y métricas comparativas para determinar el **mejor algoritmo de detección de anomalías** para Mantenimiento Predictivo.
+Esta carpeta contiene el script de comparación exhaustiva entre CBLOF e Isolation Forest. El script genera análisis visuales y métricas comparativas para evaluar el desempeño de ambos algoritmos de detección de anomalías en el contexto de Mantenimiento Predictivo.
 
 ## 🎯 Objetivo
 
 Comparar los algoritmos CBLOF e Isolation Forest lado a lado para:
-- Identificar cuál tiene mejor rendimiento
-- Visualizar diferencias en detecciones
-- Generar reporte detallado con recomendación
-- Determinar el **ganador** basado en métricas objetivas
+- Evaluar el rendimiento de cada algoritmo
+- Visualizar diferencias en las detecciones
+- Generar reporte detallado con análisis de métricas
+- Facilitar la toma de decisiones basada en métricas objetivas
 
 ## 🚀 Uso
 
@@ -35,9 +35,9 @@ cd Comparaciones
 python comparar_algoritmos.py
 ```
 
-## 📊 Outputs Generados
+## 📊 Outputs que se Generarán
 
-Al ejecutar el script, se generan automáticamente:
+Al ejecutar el script, se generarán automáticamente:
 
 ### Comparaciones Visuales Lado a Lado
 

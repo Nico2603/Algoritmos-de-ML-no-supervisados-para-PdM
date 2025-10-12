@@ -4,13 +4,6 @@
 
 Este proyecto implementa y compara **cuatro algoritmos** de Machine Learning no supervisado aplicados al **Mantenimiento Predictivo**, determinando cuál es el mejor algoritmo de **Clustering** y cuál es el mejor de **Detección de Anomalías** mediante análisis comparativo exhaustivo con **datasets de más de 500,000 registros**.
 
-### ⚡ Optimizaciones Implementadas
-
-- **Muestreo Estratégico**: Algoritmos optimizados para datasets grandes (500k+ registros)
-- **Visualizaciones Mejoradas**: Gráficas 3D corregidas con proporciones adecuadas
-- **Rendimiento Optimizado**: Ejecución rápida mediante muestreo inteligente
-- **Análisis Automatizado**: Scripts de comparación con reportes completos
-
 ## 📊 Algoritmos Implementados
 
 ### 🔵 Clustering
@@ -210,21 +203,55 @@ pip install pyod
 
 ## ⚡ Optimizaciones de Rendimiento
 
-### Muestreo Estratégico
-- **Optimización de parámetros**: Datasets reducidos a 8,000-15,000 muestras
-- **Visualización**: Muestreo inteligente a 6,000-10,000 puntos para gráficas
-- **Reproducibilidad**: Semilla fija (42) para resultados consistentes
+### Muestreo Estratégico Unificado
+- **Optimización de parámetros**: 10,000 muestras consistentes entre todos los algoritmos
+- **Visualización**: 8,000 puntos para gráficas con reproducibilidad garantizada
+- **Seeds consistentes**: Semilla fija (42) aplicada en TODOS los muestreos aleatorios
 
 ### Gráficas 3D Mejoradas
 - **Corrección de aspecto**: Ejes proporcionalmente escalados
 - **Rangos normalizados**: Evita deformación visual
-- **Muestreo para visualización**: Renderizado rápido sin pérdida de información
+- **Ángulos optimizados**: Vista inicial óptima (elev=20, azim=45)
+- **Colores consistentes**: Esquema unificado entre algoritmos para comparaciones justas
 
 ### Parámetros Optimizados
-- **K-Means**: K máximo reducido a 6, muestreo a 15,000 puntos
-- **DBSCAN**: Grid simplificado, 4 valores eps, muestreo a 8,000 puntos  
-- **Isolation Forest**: n_estimators reducido, muestreo a 10,000 puntos
-- **CBLOF**: Grid simplificado, parámetros fijos, muestreo a 8,000 puntos
+- **K-Means**: K máximo reducido a 6, detección de outliers con percentil 95
+- **DBSCAN**: Grid simplificado, optimización con NearestNeighbors
+- **Isolation Forest**: n_estimators reducido, scores normalizados
+- **CBLOF**: Grid simplificado, scores normalizados de PyOD
+
+## 🚀 Mejoras Implementadas (v2.0)
+
+### Estandarización y Comparabilidad
+- **✅ Normalización de scores**: Todos los algoritmos normalizan scores al rango [0, 1]
+- **✅ Muestreo unificado**: Mismo tamaño de muestra (10k optimización, 8k visualización)
+- **✅ Seeds consistentes**: Reproducibilidad garantizada con semilla 42
+- **✅ Nombres de archivos**: Estandarizados (`anomaly_scores.csv`, `metrics.csv`)
+
+### Tracking de Rendimiento
+- **✅ Tiempo de ejecución**: Medición precisa con `time` y `tracemalloc`
+- **✅ Uso de memoria**: Memoria máxima utilizada en MB
+- **✅ Métricas extendidas**: CSV incluye `tiempo_ejecucion_s` y `memoria_max_mb`
+
+### Visualizaciones Consistentes
+- **✅ Colores estandarizados**: 
+  - Clustering: `tab10` colormap
+  - Detección de anomalías: Azul (#1f77b4) normal, Rojo (#d62728) anomalía
+- **✅ Tamaños de puntos**: Normal (10), Anomalía (25), Ruido DBSCAN (30)
+- **✅ Títulos informativos**: Incluyen número de clusters, anomalías y porcentajes
+- **✅ Grids mejorados**: Alpha 0.3, linestyle '--', linewidth 0.5
+- **✅ Ángulos 3D optimizados**: elev=20°, azim=45° para mejor perspectiva
+
+### Validación y Robustez
+- **✅ Validación de datos**: Verifica tamaño mínimo, varianza y outliers extremos
+- **✅ Detección de outliers en K-Means**: Fix crítico usando percentil 95
+- **✅ Batching en DBSCAN**: Procesamiento eficiente para datasets >50k puntos
+- **✅ Métricas seguras**: Validación de NaN/None en comparaciones
+
+### Configuración Centralizada
+- **✅ `config.py`**: Archivo centralizado con todas las constantes globales
+- **✅ Funciones compartidas**: `normalizar_scores_min_max()`, `validar_datos_entrada()`, `aplicar_pca_consistente()`
+- **✅ Consistencia garantizada**: Todos los algoritmos usan la misma configuración
 
 ## 🎓 Características de los Algoritmos
 

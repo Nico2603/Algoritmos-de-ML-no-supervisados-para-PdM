@@ -1,20 +1,16 @@
-# CBLOF - Cluster-Based Local Outlier Factor **OPTIMIZADO**
+# CBLOF - Cluster-Based Local Outlier Factor
 
 ## 📋 Descripción
 
-CBLOF es un algoritmo de detección de anomalías que utiliza clustering para proporcionar contexto local. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
-
-### ⚡ Optimizaciones Implementadas
-- 🚀 **Muestreo estratégico**: Reducción inteligente a 8,000 muestras para optimización
-- 🎯 **Visualización optimizada**: Muestreo a 6,000 puntos para gráficas rápidas  
-- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
-- ⚡ **Grid simplificado**: Parámetros fijos para ejecución rápida
+CBLOF (Cluster-Based Local Outlier Factor) es un algoritmo de detección de anomalías que utiliza clustering para establecer contexto local y luego calcula scores de outlier basándose en la pertenencia a clusters y la distancia al cluster más cercano.
 
 ### Características Principales
-- ✅ **Utiliza clustering** para contexto local
-- ✅ **Excelente para anomalías locales** dentro de clusters
-- ✅ **Considera densidad y estructura** de los datos
-- ✅ **Optimizado para datasets grandes** (500k+ registros)
+- ✅ Utiliza clustering para contexto local
+- ✅ Excelente para anomalías locales dentro de clusters
+- ✅ Considera densidad y estructura de los datos
+- ✅ Búsqueda automática de hiperparámetros óptimos
+- ✅ Visualizaciones en 3D de anomalías detectadas
+- ✅ Scores basados en tamaño de cluster y distancia
 - ⚠️ Requiere especificar número de clusters
 - ⚠️ Más sensible a la elección de parámetros
 
@@ -222,7 +218,3 @@ Esto generará:
 
 Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de CBLOF se comparan directamente con Isolation Forest para determinar el mejor algoritmo de detección de anomalías para esta aplicación específica.
 
----
-
-**Última actualización**: Octubre 2025  
-**Versión**: 3.0 - **OPTIMIZADA** ⚡

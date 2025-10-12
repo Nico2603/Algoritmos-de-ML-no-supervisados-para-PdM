@@ -1,21 +1,15 @@
-# K-Means - Algoritmo de Clustering por Centroides **OPTIMIZADO**
+# K-Means - Algoritmo de Clustering por Centroides
 
 ## 📋 Descripción
 
-K-Means es un algoritmo de clustering que particiona los datos en K grupos (clusters) minimizando la varianza dentro de cada grupo. **Versión optimizada** para datasets grandes (500k+ registros) con muestreo estratégico y visualizaciones 3D corregidas.
-
-### ⚡ Optimizaciones Implementadas
-- 🚀 **Muestreo estratégico**: Reducción inteligente a 15,000 muestras para optimización de parámetros
-- 🎯 **Visualización optimizada**: Muestreo a 10,000 puntos para gráficas rápidas y claras
-- 📊 **Gráficas 3D corregidas**: Proporciones adecuadas, sin deformación visual
-- ⚡ **K reducido**: Búsqueda limitada a K=2-6 para ejecución rápida
+K-Means es un algoritmo de clustering que particiona los datos en K grupos (clusters) minimizando la varianza dentro de cada grupo. El algoritmo itera asignando cada punto al centroide más cercano y recalculando los centroides hasta convergencia.
 
 ### Características Principales
-- ✅ **Muy rápido** - Optimizado para ejecución veloz
-- ✅ **Escalable** - Maneja datasets de 500k+ registros eficientemente  
-- ✅ **Visualizaciones mejoradas** - Gráficas 3D con proporciones correctas
-- ✅ **Asignación determinística** de puntos a clusters
-- ⚠️ Requiere especificar el número de clusters a priori
+- ✅ Asignación determinística de puntos a clusters
+- ✅ Búsqueda automática del número óptimo de clusters (K=2-6)
+- ✅ Visualizaciones en 2D y 3D usando PCA
+- ✅ Genera visualizaciones con proporciones correctas
+- ⚠️ Requiere especificar el rango de clusters a evaluar
 - ⚠️ Sensible a inicialización y outliers
 
 ## 🎯 Objetivo
@@ -195,8 +189,8 @@ Esto generará:
 | Necesita especificar K | ✅ Sí | ❌ No |
 | Detecta outliers | ❌ No | ✅ Sí |
 | Forma de clusters | Solo esféricos | Cualquier forma |
-| Velocidad | ⚡ Muy rápido | 🐌 Más lento |
-| Escalabilidad | ✅ Excelente | ⚠️ Limitada |
+| Complejidad | O(n*k*i) | O(n²) o O(n log n) |
+| Escalabilidad | Para datasets grandes | Para datasets medianos |
 
 ## 📚 Referencias
 
@@ -207,8 +201,3 @@ Esto generará:
 ## 🤝 Contribución al Proyecto
 
 Este algoritmo es parte del proyecto de comparación de algoritmos de ML no supervisados para Mantenimiento Predictivo. Los resultados de K-Means se comparan directamente con DBSCAN para determinar el mejor algoritmo de clustering para esta aplicación específica.
-
----
-
-**Última actualización**: Octubre 2025  
-**Versión**: 3.0 - **OPTIMIZADA** ⚡

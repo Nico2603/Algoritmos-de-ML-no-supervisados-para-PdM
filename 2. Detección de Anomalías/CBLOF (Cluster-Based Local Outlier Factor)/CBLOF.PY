@@ -1,13 +1,7 @@
-"""
-Detección de Anomalías usando CBLOF (Cluster-Based Local Outlier Factor)
-
-Este script implementa la detección de anomalías utilizando el algoritmo CBLOF
-con búsqueda automática de hiperparámetros para optimizar el rendimiento.
-"""
-
 import numpy as np
 import pandas as pd
 import os
+import sys
 import matplotlib.pyplot as plt
 from pathlib import Path
 from pyod.models.cblof import CBLOF
@@ -21,6 +15,13 @@ from joblib import Parallel, delayed
 from sklearn.model_selection import ParameterGrid
 from typing import Tuple, Dict, Any, Optional, List
 import warnings
+import time
+import tracemalloc
+import random
+
+# Importar configuración centralizada
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+import config
 
 # Suprimir warnings no críticos
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -34,16 +35,22 @@ ARCHIVO_ANOMALIAS = 'anomalies.csv'
 ARCHIVO_MODELO_PKL = 'cblof_model.pkl'
 ARCHIVO_MODELO_H5 = 'cblof_model.h5'
 
-# Configuración (100% no-supervisado)
-USECOLS = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'fecha']
-CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
-CARACTERISTICA_MAGNITUD = 'magnitud_aceleracion'
-
-# Parámetros por defecto optimizados
+# Usar constantes del config centralizado
+USECOLS = config.USECOLS
+CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
+CARACTERISTICA_MAGNITUD = config.CARACTERISTICA_MAGNITUD
 PARAMETROS_PCA = {'n_components': 3}
 CONTAMINACION_DEFAULT = 0.1
-RANDOM_STATE = 42
-N_JOBS = 1  # Secuencial para evitar problemas de memoria
+RANDOM_STATE = config.RANDOM_STATE
+N_JOBS = config.N_JOBS_PARALELO
+COLOR_NORMAL = config.COLOR_NORMAL
+COLOR_ANOMALIA = config.COLOR_ANOMALIA
+ALPHA_NORMAL = config.ALPHA_NORMAL
+ALPHA_ANOMALIA = config.ALPHA_ANOMALIA
+SCATTER_SIZE_NORMAL = config.SCATTER_SIZE_NORMAL
+SCATTER_SIZE_ANOMALIA = config.SCATTER_SIZE_ANOMALIA
+FIGSIZE_2D = config.FIGSIZE_2D
+FIGSIZE_3D = config.FIGSIZE_3D
 
 # Grid de parámetros para búsqueda (optimizado para velocidad)
 PARAM_GRID = {
@@ -53,9 +60,9 @@ PARAM_GRID = {
     'use_weights': [True]      # Solo True para simplicidad
 }
 
-# Optimización de muestreo
-MAX_MUESTRAS_OPTIMIZACION = 8000   # Reducido significativamente para velocidad
-MAX_MUESTRAS_VISUALIZATION = 6000  # Muestreo para visualización
+# Optimización de muestreo - usar valores del config
+MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION
+MAX_MUESTRAS_VISUALIZATION = config.MAX_MUESTRAS_VISUALIZATION
 
 
 def configurar_logging(directorio_metricas: Path) -> None:
@@ -633,6 +640,10 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
 
 def main() -> None:
     """Función principal que ejecuta todo el pipeline de detección de anomalías."""
+    # Iniciar tracking de tiempo y memoria
+    tiempo_inicio = time.time()
+    tracemalloc.start()
+    
     try:
         # 1. Configuración inicial
         directorio_script = Path(__file__).parent.absolute()
@@ -640,6 +651,9 @@ def main() -> None:
         configurar_logging(directorio_metricas)
         
         logging.info("=== INICIANDO PROCESO DE DETECCIÓN DE ANOMALÍAS CON CBLOF ===")
+        
+        # Aplicar seeds para reproducibilidad
+        config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         # 2. Cargar y validar datos
         ruta_datos = directorio_script / ARCHIVO_DATOS
@@ -696,26 +710,38 @@ def main() -> None:
         logging.info(f"Escalador guardado en {ruta_escalador}")
         logging.info(f"PCA guardado en {ruta_pca}")
         
+        # Calcular métricas de rendimiento
+        tiempo_total = time.time() - tiempo_inicio
+        memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
+        memoria_max = memoria_pico / 1024**2  # Convertir a MB
+        tracemalloc.stop()
+        
+        logging.info(f"⏱️  Tiempo total de ejecución: {tiempo_total:.2f} segundos")
+        logging.info(f"💾 Memoria máxima utilizada: {memoria_max:.2f} MB")
+        
         # 10. Generar visualizaciones
         generar_visualizaciones(mejor_modelo, X_pca, datos_limpios, directorio_graficas)
         
         # 11. Guardar anomalías detectadas
         guardar_anomalias_detectadas(mejor_modelo, datos_limpios, directorio_metricas)
         
-        # 12. Guardar métricas estandarizadas CSV
+        # 12. Guardar métricas estandarizadas CSV (incluir tiempo y memoria)
         ruta_metricas_csv = directorio_metricas / 'metrics.csv'
-        guardar_metricas_csv(mejor_modelo, datos_limpios, mejores_parametros, metricas, ruta_metricas_csv)
+        guardar_metricas_csv(mejor_modelo, datos_limpios, mejores_parametros, metricas, ruta_metricas_csv,
+                            tiempo_total, memoria_max)
         logging.info(f"Métricas CSV guardadas en {ruta_metricas_csv}")
         
         logging.info("=== PROCESO COMPLETADO EXITOSAMENTE ===")
         
     except Exception as e:
+        tracemalloc.stop()
         logging.error(f"Error en el proceso principal: {e}")
         raise
 
 
 def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros: Dict[str, Any], 
-                        metricas: Dict[str, float], ruta_archivo: Path) -> None:
+                        metricas: Dict[str, float], ruta_archivo: Path,
+                        tiempo_total: float = 0.0, memoria_max: float = 0.0) -> None:
     """
     Guarda métricas estandarizadas en formato CSV para comparación entre algoritmos.
     
@@ -727,8 +753,17 @@ def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros:
         ruta_archivo: Ruta donde guardar el CSV
     """
     # Métricas básicas
-    anomaly_scores = modelo.decision_scores_
+    anomaly_scores_raw = modelo.decision_scores_
+    
+    # Normalizar scores al rango [0, 1] usando función centralizada
+    anomaly_scores = config.normalizar_scores_min_max(anomaly_scores_raw)
+    
     etiquetas_binarias = modelo.labels_
+    
+    # Recalcular separación con scores normalizados
+    p95_score = np.percentile(anomaly_scores, 95)
+    p50_score = np.percentile(anomaly_scores, 50)
+    separacion_normalizada = p95_score - p50_score
     
     metricas_csv = {
         'algoritmo': 'CBLOF',
@@ -738,8 +773,10 @@ def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros:
         'calinski_harabasz_score': None,
         'davies_bouldin_score': None,
         'pct_anomalias': np.mean(etiquetas_binarias) * 100,
-        'p95_minus_p50': metricas.get('separacion_scores', 0),
-        'mean_score': np.mean(anomaly_scores)
+        'p95_minus_p50': separacion_normalizada,
+        'mean_score': np.mean(anomaly_scores),
+        'tiempo_ejecucion_s': tiempo_total,
+        'memoria_max_mb': memoria_max
     }
     
 

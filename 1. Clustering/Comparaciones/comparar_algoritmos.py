@@ -1,14 +1,3 @@
-"""
-Script de Comparación de Algoritmos de Clustering
-DBSCAN vs K-Means
-
-Este script realiza una comparación exhaustiva de los algoritmos de clustering
-generando visualizaciones comparativas, métricas lado a lado y análisis detallado.
-
-Autor: Sistema de Análisis de Clustering
-Fecha: Octubre 2025
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,16 +6,35 @@ from matplotlib.gridspec import GridSpec
 import os
 from pathlib import Path
 import json
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import warnings
 
 warnings.filterwarnings('ignore')
 
-# Configuración
+# Función para obtener métricas de forma segura
+def obtener_metrica_segura(df: pd.DataFrame, columna: str, default: float = -1.0) -> float:
+    """
+    Obtiene una métrica de forma segura, manejando NaN y None.
+    
+    Args:
+        df: DataFrame con las métricas
+        columna: Nombre de la columna
+        default: Valor por defecto si la métrica no está disponible
+        
+    Returns:
+        Valor de la métrica o default si no está disponible
+    """
+    try:
+        valor = df[columna].values[0]
+        if pd.isna(valor) or valor is None:
+            return default
+        return float(valor)
+    except (KeyError, IndexError):
+        return default
+
 DIRECTORIO_BASE = Path(__file__).parent.parent
 DIRECTORIO_COMPARACIONES = Path(__file__).parent
 
-# Rutas de datos
 RUTAS = {
     'DBSCAN': {
         'metricas_csv': DIRECTORIO_BASE / 'DBSCAN' / 'metricas_DBSCAN' / 'metrics.csv',
@@ -46,7 +54,6 @@ RUTAS = {
 
 
 def verificar_archivos() -> bool:
-    """Verifica que todos los archivos necesarios existan."""
     archivos_faltantes = []
     
     for algoritmo, rutas in RUTAS.items():
@@ -65,14 +72,12 @@ def verificar_archivos() -> bool:
 
 
 def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Carga las métricas de ambos algoritmos."""
     metricas_dbscan = pd.read_csv(RUTAS['DBSCAN']['metricas_csv'])
     metricas_kmeans = pd.read_csv(RUTAS['K-Means']['metricas_csv'])
     return metricas_dbscan, metricas_kmeans
 
 
 def crear_comparacion_imagenes_lado_a_lado() -> None:
-    """Crea una comparación visual de las imágenes generadas lado a lado."""
     print("\n📊 Generando comparación visual de gráficas...")
     
     # Comparación 2D
@@ -102,7 +107,6 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.close()
     print(f"✅ Comparación 2D guardada: {ruta_comparacion_2d.name}")
     
-    # Comparación 3D
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
     
@@ -132,7 +136,11 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
 
 def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame, 
                                      metricas_kmeans: pd.DataFrame) -> pd.DataFrame:
-    """Crea tabla comparativa de métricas."""
+    tiempo_dbscan = obtener_metrica_segura(metricas_dbscan, 'tiempo_ejecucion_s', 0)
+    tiempo_kmeans = obtener_metrica_segura(metricas_kmeans, 'tiempo_ejecucion_s', 0)
+    memoria_dbscan = obtener_metrica_segura(metricas_dbscan, 'memoria_max_mb', 0)
+    memoria_kmeans = obtener_metrica_segura(metricas_kmeans, 'memoria_max_mb', 0)
+    
     comparacion = {
         'Métrica': [
             'Algoritmo',
@@ -142,7 +150,9 @@ def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame,
             'Davies-Bouldin Index',
             'Porcentaje de Anomalías (%)',
             'Separación de Scores (P95-P50)',
-            'Score Promedio'
+            'Score Promedio',
+            'Tiempo de Ejecución (s)',
+            'Memoria Máxima (MB)'
         ],
         'DBSCAN': [
             metricas_dbscan['algoritmo'].values[0],
@@ -152,7 +162,9 @@ def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame,
             f"{metricas_dbscan['davies_bouldin_score'].values[0]:.4f}" if not pd.isna(metricas_dbscan['davies_bouldin_score'].values[0]) else 'N/A',
             f"{metricas_dbscan['pct_anomalias'].values[0]:.2f}",
             f"{metricas_dbscan['p95_minus_p50'].values[0]:.4f}",
-            f"{metricas_dbscan['mean_score'].values[0]:.4f}"
+            f"{metricas_dbscan['mean_score'].values[0]:.4f}",
+            f"{tiempo_dbscan:.2f}" if tiempo_dbscan > 0 else 'N/A',
+            f"{memoria_dbscan:.2f}" if memoria_dbscan > 0 else 'N/A'
         ],
         'K-Means': [
             metricas_kmeans['algoritmo'].values[0],
@@ -162,7 +174,9 @@ def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame,
             f"{metricas_kmeans['davies_bouldin_score'].values[0]:.4f}" if not pd.isna(metricas_kmeans['davies_bouldin_score'].values[0]) else 'N/A',
             f"{metricas_kmeans['pct_anomalias'].values[0]:.2f}",
             f"{metricas_kmeans['p95_minus_p50'].values[0]:.4f}",
-            f"{metricas_kmeans['mean_score'].values[0]:.4f}"
+            f"{metricas_kmeans['mean_score'].values[0]:.4f}",
+            f"{tiempo_kmeans:.2f}" if tiempo_kmeans > 0 else 'N/A',
+            f"{memoria_kmeans:.2f}" if memoria_kmeans > 0 else 'N/A'
         ]
     }
     
@@ -172,7 +186,6 @@ def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame,
 
 def generar_graficos_metricas(metricas_dbscan: pd.DataFrame, 
                               metricas_kmeans: pd.DataFrame) -> None:
-    """Genera gráficos comparativos de métricas."""
     print("\n📈 Generando gráficos comparativos de métricas...")
     
     # Gráfico de barras comparativo
@@ -227,12 +240,10 @@ def generar_graficos_metricas(metricas_dbscan: pd.DataFrame,
     plt.close()
     print(f"✅ Gráfico de barras guardado: {ruta_grafico.name}")
     
-    # Gráfico de radar
     crear_grafico_radar(metricas_dbscan, metricas_kmeans)
 
 
 def crear_grafico_radar(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> None:
-    """Crea gráfico de radar para comparación multidimensional."""
     fig = plt.figure(figsize=(11, 11))
     ax = fig.add_subplot(111, projection='polar')
     
@@ -302,11 +313,66 @@ def crear_grafico_radar(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataF
     print(f"✅ Gráfico de radar guardado: {ruta_radar.name}")
 
 
+def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> None:
+    """
+    Genera gráficos comparativos de rendimiento (tiempo y memoria).
+    """
+    print("\n⏱️  Generando gráficos de rendimiento...")
+    
+    tiempo_dbscan = obtener_metrica_segura(metricas_dbscan, 'tiempo_ejecucion_s', 0)
+    tiempo_kmeans = obtener_metrica_segura(metricas_kmeans, 'tiempo_ejecucion_s', 0)
+    memoria_dbscan = obtener_metrica_segura(metricas_dbscan, 'memoria_max_mb', 0)
+    memoria_kmeans = obtener_metrica_segura(metricas_kmeans, 'memoria_max_mb', 0)
+    
+    # Crear gráfico con 2 subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Gráfico de tiempo de ejecución
+    algoritmos = ['DBSCAN', 'K-Means']
+    tiempos = [tiempo_dbscan, tiempo_kmeans]
+    colores = ['steelblue', 'coral']
+    
+    bars1 = ax1.bar(algoritmos, tiempos, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax1.set_ylabel('Tiempo (segundos)', fontsize=12, fontweight='bold')
+    ax1.set_title('Comparación de Tiempo de Ejecución', fontsize=14, fontweight='bold', pad=15)
+    ax1.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    
+    # Añadir valores sobre las barras
+    for bar, tiempo in zip(bars1, tiempos):
+        height = bar.get_height()
+        if height > 0:
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{tiempo:.2f}s',
+                    ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Gráfico de uso de memoria
+    memorias = [memoria_dbscan, memoria_kmeans]
+    bars2 = ax2.bar(algoritmos, memorias, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax2.set_ylabel('Memoria (MB)', fontsize=12, fontweight='bold')
+    ax2.set_title('Comparación de Uso de Memoria', fontsize=14, fontweight='bold', pad=15)
+    ax2.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
+    
+    # Añadir valores sobre las barras
+    for bar, memoria in zip(bars2, memorias):
+        height = bar.get_height()
+        if height > 0:
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{memoria:.2f} MB',
+                    ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    plt.suptitle('Métricas de Rendimiento: DBSCAN vs K-Means', 
+                fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    
+    ruta_rendimiento = DIRECTORIO_COMPARACIONES / 'comparacion_rendimiento.png'
+    plt.savefig(ruta_rendimiento, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
+
+
 def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> Dict[str, Any]:
-    """Determina el ganador basándose en las métricas."""
     analisis = {}
     
-    # Comparar métricas
     sil_dbscan = metricas_dbscan['silhouette_score'].values[0] if not pd.isna(metricas_dbscan['silhouette_score'].values[0]) else -1
     sil_kmeans = metricas_kmeans['silhouette_score'].values[0] if not pd.isna(metricas_kmeans['silhouette_score'].values[0]) else -1
     
@@ -319,7 +385,6 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
     puntos_dbscan = 0
     puntos_kmeans = 0
     
-    # Silhouette (mayor es mejor)
     if sil_dbscan > sil_kmeans:
         puntos_dbscan += 1
         analisis['mejor_silhouette'] = 'DBSCAN'
@@ -329,7 +394,6 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
     else:
         analisis['mejor_silhouette'] = 'Empate'
     
-    # Calinski-Harabasz (mayor es mejor)
     if cal_dbscan > cal_kmeans:
         puntos_dbscan += 1
         analisis['mejor_calinski'] = 'DBSCAN'
@@ -339,7 +403,6 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
     else:
         analisis['mejor_calinski'] = 'Empate'
     
-    # Davies-Bouldin (menor es mejor)
     if dav_dbscan < dav_kmeans:
         puntos_dbscan += 1
         analisis['mejor_davies'] = 'DBSCAN'
@@ -349,7 +412,6 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
     else:
         analisis['mejor_davies'] = 'Empate'
     
-    # Determinar ganador
     if puntos_dbscan > puntos_kmeans:
         analisis['ganador'] = 'DBSCAN'
         analisis['puntos_dbscan'] = puntos_dbscan
@@ -368,7 +430,6 @@ def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFram
 
 def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str, Any],
                              metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> None:
-    """Guarda reporte completo de la comparación."""
     print("\n📝 Generando reporte completo...")
     
     ruta_reporte = DIRECTORIO_COMPARACIONES / 'REPORTE_COMPARACION_CLUSTERING.txt'
@@ -385,20 +446,17 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write(tabla_comparativa.to_string(index=False))
         f.write("\n\n")
         
-        # Análisis de resultados
         f.write("2. ANÁLISIS DE RESULTADOS POR MÉTRICA\n")
         f.write("-" * 100 + "\n")
         f.write(f"✓ Mejor Silhouette Score: {analisis['mejor_silhouette']}\n")
         f.write(f"✓ Mejor Calinski-Harabasz Score: {analisis['mejor_calinski']}\n")
         f.write(f"✓ Mejor Davies-Bouldin Index: {analisis['mejor_davies']}\n\n")
         
-        # Puntuación
         f.write("3. PUNTUACIÓN FINAL\n")
         f.write("-" * 100 + "\n")
         f.write(f"DBSCAN: {analisis['puntos_dbscan']}/3 métricas\n")
         f.write(f"K-Means: {analisis['puntos_kmeans']}/3 métricas\n\n")
         
-        # Ganador
         f.write("4. ALGORITMO GANADOR\n")
         f.write("-" * 100 + "\n")
         f.write(f"🏆 GANADOR: {analisis['ganador']}\n\n")
@@ -412,7 +470,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         
         f.write("\n")
         
-        # Ventajas y desventajas
         f.write("5. CARACTERÍSTICAS Y CONSIDERACIONES\n")
         f.write("-" * 100 + "\n\n")
         
@@ -439,7 +496,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("    ✗ Asume clusters de forma esférica\n")
         f.write("    ✗ No identifica outliers automáticamente\n\n")
         
-        # Detalles adicionales
         f.write("6. DETALLES ADICIONALES\n")
         f.write("-" * 100 + "\n")
         f.write(f"Número de Clusters:\n")
@@ -448,15 +504,35 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         
         f.write(f"Porcentaje de Anomalías Detectadas:\n")
         f.write(f"  DBSCAN: {metricas_dbscan['pct_anomalias'].values[0]:.2f}%\n")
-        f.write(f"  K-Means: {metricas_kmeans['pct_anomalias'].values[0]:.2f}% (K-Means no detecta anomalías binarias)\n\n")
+        f.write(f"  K-Means: {metricas_kmeans['pct_anomalias'].values[0]:.2f}% (Detecta outliers con percentil 95)\n\n")
         
-        # Archivos generados
+        tiempo_dbscan = obtener_metrica_segura(metricas_dbscan, 'tiempo_ejecucion_s', 0)
+        tiempo_kmeans = obtener_metrica_segura(metricas_kmeans, 'tiempo_ejecucion_s', 0)
+        memoria_dbscan = obtener_metrica_segura(metricas_dbscan, 'memoria_max_mb', 0)
+        memoria_kmeans = obtener_metrica_segura(metricas_kmeans, 'memoria_max_mb', 0)
+        
+        f.write(f"Métricas de Rendimiento:\n")
+        if tiempo_dbscan > 0 and tiempo_kmeans > 0:
+            f.write(f"  Tiempo de Ejecución:\n")
+            f.write(f"    DBSCAN: {tiempo_dbscan:.2f}s\n")
+            f.write(f"    K-Means: {tiempo_kmeans:.2f}s\n")
+            mas_rapido = "K-Means" if tiempo_kmeans < tiempo_dbscan else "DBSCAN"
+            f.write(f"    ⚡ {mas_rapido} es más rápido\n\n")
+        
+        if memoria_dbscan > 0 and memoria_kmeans > 0:
+            f.write(f"  Uso de Memoria Máxima:\n")
+            f.write(f"    DBSCAN: {memoria_dbscan:.2f} MB\n")
+            f.write(f"    K-Means: {memoria_kmeans:.2f} MB\n")
+            menos_memoria = "K-Means" if memoria_kmeans < memoria_dbscan else "DBSCAN"
+            f.write(f"    💾 {menos_memoria} usa menos memoria\n\n")
+        
         f.write("7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN\n")
         f.write("-" * 100 + "\n")
         f.write("  • comparacion_visual_2d.png - Comparación lado a lado de gráficas 2D\n")
         f.write("  • comparacion_visual_3d.png - Comparación lado a lado de gráficas 3D\n")
         f.write("  • comparacion_metricas_barras.png - Gráfico de barras comparativo\n")
         f.write("  • comparacion_metricas_radar.png - Gráfico de radar multidimensional\n")
+        f.write("  • comparacion_rendimiento.png - Gráfico de rendimiento (tiempo y memoria)\n")
         f.write("  • tabla_comparativa.csv - Tabla de métricas en formato CSV\n")
         f.write("  • REPORTE_COMPARACION_CLUSTERING.txt - Este archivo\n\n")
         
@@ -468,46 +544,39 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
 
 
 def main():
-    """Función principal del script de comparación."""
     print("=" * 100)
     print(" " * 25 + "COMPARACIÓN DE ALGORITMOS DE CLUSTERING")
     print(" " * 40 + "DBSCAN vs K-Means")
     print("=" * 100)
     
-    # Verificar archivos
     if not verificar_archivos():
         return
     
     print("\n✅ Todos los archivos necesarios están presentes.")
     
-    # Cargar métricas
     print("\n📂 Cargando métricas...")
     metricas_dbscan, metricas_kmeans = cargar_metricas()
     print("✅ Métricas cargadas correctamente.")
     
-    # Crear comparaciones visuales
     crear_comparacion_imagenes_lado_a_lado()
     
-    # Crear tabla comparativa
     print("\n📋 Generando tabla comparativa...")
     tabla_comparativa = crear_tabla_comparativa_metricas(metricas_dbscan, metricas_kmeans)
     print("\n" + tabla_comparativa.to_string(index=False))
     
-    # Guardar tabla
     ruta_tabla_csv = DIRECTORIO_COMPARACIONES / 'tabla_comparativa.csv'
     tabla_comparativa.to_csv(ruta_tabla_csv, index=False, encoding='utf-8')
     print(f"\n✅ Tabla guardada: {ruta_tabla_csv.name}")
     
-    # Generar gráficos de métricas
     generar_graficos_metricas(metricas_dbscan, metricas_kmeans)
     
-    # Analizar ganador
+    crear_grafico_rendimiento(metricas_dbscan, metricas_kmeans)
+    
     print("\n🔍 Analizando resultados...")
     analisis = analizar_ganador(metricas_dbscan, metricas_kmeans)
     print(f"\n🏆 ALGORITMO GANADOR: {analisis['ganador']}")
     print(f"   Puntuación: DBSCAN {analisis['puntos_dbscan']}/3 - K-Means {analisis['puntos_kmeans']}/3")
     
-    # Guardar reporte completo
     guardar_reporte_completo(tabla_comparativa, analisis, metricas_dbscan, metricas_kmeans)
     
     print("\n" + "=" * 100)
