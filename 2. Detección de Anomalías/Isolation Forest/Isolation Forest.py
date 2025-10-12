@@ -10,7 +10,10 @@ import random
 
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 import joblib
 import h5py
 from sklearn.ensemble import IsolationForest
@@ -20,8 +23,13 @@ from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silho
 from sklearn.model_selection import ParameterGrid
 from joblib import Parallel, delayed
 
+# Configurar UTF-8 para salida estándar
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Importar configuración centralizada
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 # Suprimir warnings innecesarios
@@ -92,7 +100,7 @@ def configurar_logging(ruta_archivo_log: Path) -> logging.Logger:
         logger.removeHandler(handler)
     
     # Configurar formato
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(message)s')  # Formato simple sin timestamp
     
     # Handler para archivo
     file_handler = logging.FileHandler(ruta_archivo_log, mode='w', encoding='utf-8')
@@ -465,8 +473,8 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     plt.ylabel('Frecuencia')
     plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
     ruta_puntuaciones = directorio_graficas / 'anomaly_scores.png'
-    plt.savefig(ruta_puntuaciones, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_puntuaciones, dpi=200, bbox_inches='tight')
+    plt.close("all")
     
     # Gráfico 3D de anomalías - OPTIMIZADO
     # Aplicar muestreo para visualización si es necesario
@@ -528,8 +536,8 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
     
     ruta_anomalias_3d = directorio_graficas / 'anomalies_3d.png'
-    plt.savefig(ruta_anomalias_3d, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_anomalias_3d, dpi=200, bbox_inches='tight')
+    plt.close("all")
 
 
 def guardar_anomalias(datos_originales: pd.DataFrame, etiquetas: np.ndarray, 
@@ -697,8 +705,8 @@ def main() -> None:
         memoria_max = memoria_pico / 1024**2  # Convertir a MB
         tracemalloc.stop()
         
-        logger.info(f"⏱️  Tiempo total de ejecución: {tiempo_total:.2f} segundos")
-        logger.info(f"💾 Memoria máxima utilizada: {memoria_max:.2f} MB")
+        logger.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
+        logger.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
         # Generar gráficos
         generar_graficos(scores_pred, X_pca, etiquetas_pred, directorios.directorio_graficas)

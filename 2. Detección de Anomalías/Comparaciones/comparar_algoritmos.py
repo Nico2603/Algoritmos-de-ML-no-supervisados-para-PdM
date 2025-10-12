@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 import matplotlib.image as mpimg
 from matplotlib.gridspec import GridSpec
 import os
@@ -105,8 +108,8 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.tight_layout()
     
     ruta_comparacion_scores = DIRECTORIO_COMPARACIONES / 'comparacion_visual_scores.png'
-    plt.savefig(ruta_comparacion_scores, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_comparacion_scores, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Comparación de scores guardada: {ruta_comparacion_scores.name}")
     
     # Comparación 3D de anomalías
@@ -132,8 +135,8 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.tight_layout()
     
     ruta_comparacion_3d = DIRECTORIO_COMPARACIONES / 'comparacion_visual_3d.png'
-    plt.savefig(ruta_comparacion_3d, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_comparacion_3d, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Comparación 3D guardada: {ruta_comparacion_3d.name}")
 
 
@@ -230,8 +233,8 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     
     plt.tight_layout()
     ruta_grafico = DIRECTORIO_COMPARACIONES / 'comparacion_metricas_barras.png'
-    plt.savefig(ruta_grafico, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Gráfico de barras guardado: {ruta_grafico.name}")
     
     crear_graficos_individuales(metricas_cblof, metricas_iforest)
@@ -260,8 +263,8 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     
     plt.tight_layout()
     ruta_porcentajes = DIRECTORIO_COMPARACIONES / 'comparacion_porcentaje_anomalias.png'
-    plt.savefig(ruta_porcentajes, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_porcentajes, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Gráfico de porcentajes guardado: {ruta_porcentajes.name}")
     
     fig, ax = plt.subplots(figsize=(11, 7))
@@ -284,8 +287,8 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     
     plt.tight_layout()
     ruta_separacion = DIRECTORIO_COMPARACIONES / 'comparacion_separacion_scores.png'
-    plt.savefig(ruta_separacion, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_separacion, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Gráfico de separación guardado: {ruta_separacion.name}")
 
 
@@ -293,7 +296,7 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
     """
     Genera gráficos comparativos de rendimiento (tiempo y memoria).
     """
-    print("\n⏱️  Generando gráficos de rendimiento...")
+    print("\nGenerando graficos de rendimiento...")
     
     tiempo_cblof = obtener_metrica_segura(metricas_cblof, 'tiempo_ejecucion_s', 0)
     tiempo_iforest = obtener_metrica_segura(metricas_iforest, 'tiempo_ejecucion_s', 0)
@@ -341,8 +344,8 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
     plt.tight_layout()
     
     ruta_rendimiento = DIRECTORIO_COMPARACIONES / 'comparacion_rendimiento.png'
-    plt.savefig(ruta_rendimiento, dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.savefig(ruta_rendimiento, dpi=200, bbox_inches='tight')
+    plt.close("all")
     print(f"✅ Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
 
 
@@ -511,7 +514,7 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
                 f.write(f"    CBLOF: {memoria_cblof:.2f} MB\n")
                 f.write(f"    Isolation Forest: {memoria_iforest:.2f} MB\n")
                 menos_memoria = "Isolation Forest" if memoria_iforest < memoria_cblof else "CBLOF"
-                f.write(f"    💾 {menos_memoria} usa menos memoria\n\n")
+                f.write(f"    [MEMORIA] {menos_memoria} usa menos memoria\n\n")
         
         f.write("7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN\n")
         f.write("-" * 100 + "\n")

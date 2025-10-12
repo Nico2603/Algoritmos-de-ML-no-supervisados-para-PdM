@@ -2,7 +2,10 @@ import numpy as np
 import pandas as pd
 import os
 import sys
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 from pathlib import Path
 from pyod.models.cblof import CBLOF
 from sklearn.preprocessing import StandardScaler
@@ -19,8 +22,11 @@ import time
 import tracemalloc
 import random
 
-# Importar configuración centralizada
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
+sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 # Suprimir warnings no críticos
@@ -81,7 +87,7 @@ def configurar_logging(directorio_metricas: Path) -> None:
     
     # File handler
     ruta_archivo_log = directorio_metricas / ARCHIVO_LOG
-    file_handler = logging.FileHandler(ruta_archivo_log, mode='w')
+    file_handler = logging.FileHandler(ruta_archivo_log, mode=\'w\', encoding=\'utf-8\')
     file_handler.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(file_handler)
     
@@ -536,8 +542,8 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         plt.grid(True, alpha=0.3)
         
         ruta_puntuaciones = directorio_graficas / 'anomaly_scores.png'
-        plt.savefig(ruta_puntuaciones, dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.savefig(ruta_puntuaciones, dpi=200, bbox_inches='tight')
+        plt.close("all")
         logging.info(f"Gráfico de puntuaciones guardado en {ruta_puntuaciones}")
     except Exception as e:
         logging.error(f"Error generando gráfico de puntuaciones: {e}")
@@ -591,8 +597,8 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
         
         ruta_anomalias_3d = directorio_graficas / 'anomalies_3d.png'
-        plt.savefig(ruta_anomalias_3d, dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.savefig(ruta_anomalias_3d, dpi=200, bbox_inches='tight')
+        plt.close("all")
         logging.info(f"Gráfico 3D guardado en {ruta_anomalias_3d}")
     except Exception as e:
         logging.error(f"Error generando gráfico 3D: {e}")
@@ -716,8 +722,8 @@ def main() -> None:
         memoria_max = memoria_pico / 1024**2  # Convertir a MB
         tracemalloc.stop()
         
-        logging.info(f"⏱️  Tiempo total de ejecución: {tiempo_total:.2f} segundos")
-        logging.info(f"💾 Memoria máxima utilizada: {memoria_max:.2f} MB")
+        logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
+        logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
         # 10. Generar visualizaciones
         generar_visualizaciones(mejor_modelo, X_pca, datos_limpios, directorio_graficas)

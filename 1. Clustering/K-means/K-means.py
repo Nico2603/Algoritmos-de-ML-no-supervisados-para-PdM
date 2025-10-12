@@ -1,8 +1,11 @@
-import numpy as np
+﻿import numpy as np
 import pandas as pd
 import os
 import sys
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -12,13 +15,19 @@ import h5py
 import logging
 from joblib import Parallel, delayed
 from typing import Tuple, List, Dict, Any
+from pathlib import Path
 import warnings
 import time
 import tracemalloc
 import random
 
+# Configurar UTF-8 para salida estándar
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Importar configuración centralizada
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 warnings.filterwarnings('ignore')
@@ -42,11 +51,11 @@ CMAP_CLUSTERING = config.CMAP_CLUSTERING
 
 class KMeansAnalyzer:
     
-    def __init__(self, directorio_script: str):
-        self.directorio_script = directorio_script
-        self.directorio_modelos = os.path.join(directorio_script, 'modelos_entrenados_KMeans')
-        self.directorio_graficas = os.path.join(directorio_script, 'graficas_KMeans')
-        self.directorio_metricas = os.path.join(directorio_script, 'metricas_KMeans')
+    def __init__(self, directorio_script: Path):
+        self.directorio_script = Path(directorio_script)
+        self.directorio_modelos = self.directorio_script / 'modelos_entrenados_KMeans'
+        self.directorio_graficas = self.directorio_script / 'graficas_KMeans'
+        self.directorio_metricas = self.directorio_script / 'metricas_KMeans'
         
         self._crear_directorios()
         self._configurar_logging()
@@ -65,8 +74,7 @@ class KMeansAnalyzer:
     
     def _crear_directorios(self) -> None:
         for directorio in [self.directorio_modelos, self.directorio_graficas, self.directorio_metricas]:
-            if not os.path.exists(directorio):
-                os.makedirs(directorio)
+            directorio.mkdir(parents=True, exist_ok=True)
     
     def _configurar_logging(self) -> None:
         logger = logging.getLogger()
@@ -75,8 +83,8 @@ class KMeansAnalyzer:
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         
-        ruta_archivo_log = os.path.join(self.directorio_metricas, 'output.log')
-        file_handler = logging.FileHandler(ruta_archivo_log, mode='w')
+        ruta_archivo_log = self.directorio_metricas / 'output.log'
+        file_handler = logging.FileHandler(ruta_archivo_log, mode='w', encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(file_handler)
         
@@ -84,9 +92,9 @@ class KMeansAnalyzer:
         console_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(console_handler)
     
-    def cargar_datos(self, ruta_datos: str) -> None:
+    def cargar_datos(self, ruta_datos: Path) -> None:
         try:
-            if not os.path.exists(ruta_datos):
+            if not ruta_datos.exists():
                 raise FileNotFoundError(f"El archivo no existe en la ruta: {ruta_datos}")
             
             try:
@@ -272,10 +280,9 @@ class KMeansAnalyzer:
         plt.title(titulo)
         plt.grid(True, alpha=0.3)
         
-        ruta_grafico = os.path.join(self.directorio_graficas, nombre_archivo)
-        plt.savefig(ruta_grafico, dpi=300, bbox_inches='tight')
-        plt.show()
-        plt.close()
+        ruta_grafico = self.directorio_graficas / nombre_archivo
+        plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
+        plt.close("all")
         
         logging.info(f"Gráfico guardado en {ruta_grafico}")
     
@@ -349,7 +356,7 @@ class KMeansAnalyzer:
     
     
     def guardar_resultados(self) -> None:
-        ruta_metricas = os.path.join(self.directorio_metricas, 'metrics.txt')
+        ruta_metricas = self.directorio_metricas / 'metrics.txt'
         with open(ruta_metricas, 'w', encoding='utf-8') as f:
             f.write("=== RESULTADOS CLUSTERING K-MEANS ===\n\n")
             f.write(f"Mejores parámetros:\n")
@@ -362,11 +369,11 @@ class KMeansAnalyzer:
             f.write(f"  - Calinski-Harabasz Score: {self.metricas_finales['calinski_harabasz']:.4f}\n")
             f.write(f"  - Davies-Bouldin Index: {self.metricas_finales['davies_bouldin']:.4f}\n")
         
-        ruta_scores = os.path.join(self.directorio_metricas, 'anomaly_scores.csv')
+        ruta_scores = self.directorio_metricas / 'anomaly_scores.csv'
         datos_salida = self.datos[['fecha'] + CARACTERISTICAS_BASE + ['anomaly_score', 'is_outlier', 'cluster_id']].copy()
         datos_salida.to_csv(ruta_scores, index=False)
         
-        ruta_metricas_csv = os.path.join(self.directorio_metricas, 'metrics.csv')
+        ruta_metricas_csv = self.directorio_metricas / 'metrics.csv'
         
         # Calcular porcentaje de outliers detectados
         pct_outliers = (self.datos['is_outlier'].sum() / len(self.datos)) * 100
@@ -386,13 +393,13 @@ class KMeansAnalyzer:
         }])
         metricas_df.to_csv(ruta_metricas_csv, index=False)
         
-        ruta_modelo_pkl = os.path.join(self.directorio_modelos, 'kmeans_model.pkl')
+        ruta_modelo_pkl = self.directorio_modelos / 'kmeans_model.pkl'
         joblib.dump(self.kmeans_final, ruta_modelo_pkl)
         
-        ruta_escalador = os.path.join(self.directorio_modelos, 'scaler.pkl')
+        ruta_escalador = self.directorio_modelos / 'scaler.pkl'
         joblib.dump(self.escalador, ruta_escalador)
         
-        ruta_modelo_h5 = os.path.join(self.directorio_modelos, 'kmeans_model.h5')
+        ruta_modelo_h5 = self.directorio_modelos / 'kmeans_model.h5'
         with h5py.File(ruta_modelo_h5, 'w') as hf:
             hf.create_dataset('cluster_centers', data=self.cluster_centers)
             hf.create_dataset('labels', data=self.labels)
@@ -439,10 +446,9 @@ class KMeansAnalyzer:
         # Grid consistente
         plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
         
-        ruta_clusters_2d = os.path.join(self.directorio_graficas, 'clusters_2d_pca.png')
-        plt.savefig(ruta_clusters_2d, dpi=300, bbox_inches='tight')
-        plt.show()
-        plt.close()
+        ruta_clusters_2d = self.directorio_graficas / 'clusters_2d_pca.png'
+        plt.savefig(ruta_clusters_2d, dpi=200, bbox_inches='tight')
+        plt.close("all")
         
         logging.info(f"Visualización de clusters 2D guardada en {ruta_clusters_2d}")
     
@@ -458,10 +464,9 @@ class KMeansAnalyzer:
         # Grid consistente
         plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
         
-        ruta_anomalias_2d = os.path.join(self.directorio_graficas, 'anomalies_pca.png')
-        plt.savefig(ruta_anomalias_2d, dpi=300, bbox_inches='tight')
-        plt.show()
-        plt.close()
+        ruta_anomalias_2d = self.directorio_graficas / 'anomalies_pca.png'
+        plt.savefig(ruta_anomalias_2d, dpi=200, bbox_inches='tight')
+        plt.close("all")
         
         logging.info(f"Visualización de anomalías 2D guardada en {ruta_anomalias_2d}")
     
@@ -507,10 +512,9 @@ class KMeansAnalyzer:
         legend = ax.legend(*scatter.legend_elements(), title="Clusters", loc='upper left', bbox_to_anchor=(0.02, 0.98))
         ax.add_artist(legend)
         
-        ruta_clusters_3d = os.path.join(self.directorio_graficas, 'clusters_3d_pca.png')
-        plt.savefig(ruta_clusters_3d, dpi=300, bbox_inches='tight')
-        plt.show()
-        plt.close()
+        ruta_clusters_3d = self.directorio_graficas / 'clusters_3d_pca.png'
+        plt.savefig(ruta_clusters_3d, dpi=200, bbox_inches='tight')
+        plt.close("all")
         
         logging.info(f"Visualización de clusters 3D guardada en {ruta_clusters_3d}")
     
@@ -525,7 +529,7 @@ class KMeansAnalyzer:
             # Aplicar seeds para reproducibilidad
             config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
             
-            ruta_datos = os.path.join(self.directorio_script, 'data.csv')
+            ruta_datos = self.directorio_script / 'data.csv'
             self.cargar_datos(ruta_datos)
             self.escalar_datos()
             
@@ -543,8 +547,8 @@ class KMeansAnalyzer:
             self.memoria_max = memoria_pico / 1024**2  # Convertir a MB
             tracemalloc.stop()
             
-            logging.info(f"⏱️  Tiempo total de ejecución: {self.tiempo_total:.2f} segundos")
-            logging.info(f"💾 Memoria máxima utilizada: {self.memoria_max:.2f} MB")
+            logging.info(f"Tiempo total de ejecucion: {self.tiempo_total:.2f} segundos")
+            logging.info(f"Memoria maxima utilizada: {self.memoria_max:.2f} MB")
             
             self.guardar_resultados()
             
@@ -559,7 +563,7 @@ class KMeansAnalyzer:
 
 
 def main():
-    directorio_script = os.path.dirname(os.path.abspath(__file__))
+    directorio_script = Path(__file__).parent
     
     analizador = KMeansAnalyzer(directorio_script)
     analizador.ejecutar_analisis_completo()

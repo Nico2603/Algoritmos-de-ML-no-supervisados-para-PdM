@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 import matplotlib.image as mpimg
 from matplotlib.gridspec import GridSpec
 import os
@@ -62,10 +65,10 @@ def verificar_archivos() -> bool:
                 archivos_faltantes.append(f"{algoritmo} - {nombre_archivo}: {ruta}")
     
     if archivos_faltantes:
-        print("❌ ERROR: Archivos faltantes:")
+        print("[ERROR] Archivos faltantes:")
         for archivo in archivos_faltantes:
             print(f"  - {archivo}")
-        print("\n⚠️  Asegúrate de ejecutar primero los algoritmos DBSCAN y K-Means.")
+        print("\n[ALERTA] Asegurate de ejecutar primero los algoritmos DBSCAN y K-Means.")
         return False
     
     return True
@@ -103,9 +106,9 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.tight_layout()
     
     ruta_comparacion_2d = DIRECTORIO_COMPARACIONES / 'comparacion_visual_2d.png'
-    plt.savefig(ruta_comparacion_2d, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"✅ Comparación 2D guardada: {ruta_comparacion_2d.name}")
+    plt.savefig(ruta_comparacion_2d, dpi=200, bbox_inches='tight')
+    plt.close("all")
+    print(f"[OK] Comparacion 2D guardada: {ruta_comparacion_2d.name}")
     
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
@@ -129,9 +132,9 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.tight_layout()
     
     ruta_comparacion_3d = DIRECTORIO_COMPARACIONES / 'comparacion_visual_3d.png'
-    plt.savefig(ruta_comparacion_3d, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"✅ Comparación 3D guardada: {ruta_comparacion_3d.name}")
+    plt.savefig(ruta_comparacion_3d, dpi=200, bbox_inches='tight')
+    plt.close("all")
+    print(f"[OK] Comparación 3D guardada: {ruta_comparacion_3d.name}")
 
 
 def crear_tabla_comparativa_metricas(metricas_dbscan: pd.DataFrame, 
@@ -236,9 +239,9 @@ def generar_graficos_metricas(metricas_dbscan: pd.DataFrame,
     
     plt.tight_layout()
     ruta_grafico = DIRECTORIO_COMPARACIONES / 'comparacion_metricas_barras.png'
-    plt.savefig(ruta_grafico, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"✅ Gráfico de barras guardado: {ruta_grafico.name}")
+    plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
+    plt.close("all")
+    print(f"[OK] Gráfico de barras guardado: {ruta_grafico.name}")
     
     crear_grafico_radar(metricas_dbscan, metricas_kmeans)
 
@@ -308,16 +311,16 @@ def crear_grafico_radar(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataF
     
     plt.tight_layout()
     ruta_radar = DIRECTORIO_COMPARACIONES / 'comparacion_metricas_radar.png'
-    plt.savefig(ruta_radar, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"✅ Gráfico de radar guardado: {ruta_radar.name}")
+    plt.savefig(ruta_radar, dpi=200, bbox_inches='tight')
+    plt.close("all")
+    print(f"[OK] Gráfico de radar guardado: {ruta_radar.name}")
 
 
 def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> None:
     """
     Genera gráficos comparativos de rendimiento (tiempo y memoria).
     """
-    print("\n⏱️  Generando gráficos de rendimiento...")
+    print("\n[TIEMPO]  Generando gráficos de rendimiento...")
     
     tiempo_dbscan = obtener_metrica_segura(metricas_dbscan, 'tiempo_ejecucion_s', 0)
     tiempo_kmeans = obtener_metrica_segura(metricas_kmeans, 'tiempo_ejecucion_s', 0)
@@ -365,9 +368,9 @@ def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd
     plt.tight_layout()
     
     ruta_rendimiento = DIRECTORIO_COMPARACIONES / 'comparacion_rendimiento.png'
-    plt.savefig(ruta_rendimiento, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"✅ Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
+    plt.savefig(ruta_rendimiento, dpi=200, bbox_inches='tight')
+    plt.close("all")
+    print(f"[OK] Gráfico de rendimiento guardado: {ruta_rendimiento.name}")
 
 
 def analizar_ganador(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd.DataFrame) -> Dict[str, Any]:
@@ -524,7 +527,7 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
             f.write(f"    DBSCAN: {memoria_dbscan:.2f} MB\n")
             f.write(f"    K-Means: {memoria_kmeans:.2f} MB\n")
             menos_memoria = "K-Means" if memoria_kmeans < memoria_dbscan else "DBSCAN"
-            f.write(f"    💾 {menos_memoria} usa menos memoria\n\n")
+            f.write(f"    [MEMORIA] {menos_memoria} usa menos memoria\n\n")
         
         f.write("7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN\n")
         f.write("-" * 100 + "\n")
@@ -540,7 +543,7 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("Fecha de generación: Octubre 2025\n")
         f.write("=" * 100 + "\n")
     
-    print(f"✅ Reporte completo guardado: {ruta_reporte.name}")
+    print(f"[OK] Reporte completo guardado: {ruta_reporte.name}")
 
 
 def main():
@@ -552,11 +555,11 @@ def main():
     if not verificar_archivos():
         return
     
-    print("\n✅ Todos los archivos necesarios están presentes.")
+    print("\n[OK] Todos los archivos necesarios están presentes.")
     
     print("\n📂 Cargando métricas...")
     metricas_dbscan, metricas_kmeans = cargar_metricas()
-    print("✅ Métricas cargadas correctamente.")
+    print("[OK] Métricas cargadas correctamente.")
     
     crear_comparacion_imagenes_lado_a_lado()
     
@@ -566,7 +569,7 @@ def main():
     
     ruta_tabla_csv = DIRECTORIO_COMPARACIONES / 'tabla_comparativa.csv'
     tabla_comparativa.to_csv(ruta_tabla_csv, index=False, encoding='utf-8')
-    print(f"\n✅ Tabla guardada: {ruta_tabla_csv.name}")
+    print(f"\n[OK] Tabla guardada: {ruta_tabla_csv.name}")
     
     generar_graficos_metricas(metricas_dbscan, metricas_kmeans)
     
@@ -580,7 +583,7 @@ def main():
     guardar_reporte_completo(tabla_comparativa, analisis, metricas_dbscan, metricas_kmeans)
     
     print("\n" + "=" * 100)
-    print(" " * 30 + "✅ COMPARACIÓN COMPLETADA EXITOSAMENTE")
+    print(" " * 30 + "[OK] COMPARACIÓN COMPLETADA EXITOSAMENTE")
     print(" " * 20 + f"📁 Resultados guardados en: {DIRECTORIO_COMPARACIONES}")
     print("=" * 100)
 

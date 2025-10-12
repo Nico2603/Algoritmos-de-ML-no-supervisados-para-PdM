@@ -1,0 +1,16 @@
+# Bibliotecas de ciencia de datos y machine learning
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+
+# PyOD para detección de anomalías
+pyod>=1.1.0
+
+# Procesamiento y persistencia
+joblib>=1.3.0
+h5py>=3.9.0
+
+# Utilidades
+scipy>=1.11.0
+

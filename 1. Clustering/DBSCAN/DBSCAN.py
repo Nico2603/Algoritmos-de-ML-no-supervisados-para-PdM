@@ -1,8 +1,11 @@
-import numpy as np
+﻿import numpy as np
 import pandas as pd
 import os
 import sys
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
 import matplotlib.pyplot as plt
+plt.ioff()  # Desactivar modo interactivo
 import warnings
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
@@ -17,12 +20,18 @@ import logging
 import gc
 from joblib import Parallel, delayed
 from typing import Dict, List, Optional, Tuple, Any
+from pathlib import Path
 import time
 import tracemalloc
 import random
 
+# Configurar UTF-8 para salida estándar
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Importar configuración centralizada
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 warnings.filterwarnings('ignore')
@@ -45,15 +54,15 @@ BATCH_SIZE = config.BATCH_SIZE
 class ConfiguradorLogging:
     
     @staticmethod
-    def configurar_logging(directorio_metricas: str) -> None:
+    def configurar_logging(directorio_metricas: Path) -> None:
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
         
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         
-        ruta_archivo_log = os.path.join(directorio_metricas, 'output.log')
-        file_handler = logging.FileHandler(ruta_archivo_log, mode='w')
+        ruta_archivo_log = directorio_metricas / 'output.log'
+        file_handler = logging.FileHandler(ruta_archivo_log, mode='w', encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(file_handler)
         
@@ -63,16 +72,16 @@ class ConfiguradorLogging:
 
 class GestorDirectorios:
     
-    def __init__(self, directorio_base: str):
-        self.directorio_base = directorio_base
-        self.directorio_modelos = os.path.join(directorio_base, 'modelos_entrenados_DBSCAN')
-        self.directorio_graficas = os.path.join(directorio_base, 'graficas_DBSCAN')
-        self.directorio_metricas = os.path.join(directorio_base, 'metricas_DBSCAN')
+    def __init__(self, directorio_base: Path):
+        self.directorio_base = Path(directorio_base)
+        self.directorio_modelos = self.directorio_base / 'modelos_entrenados_DBSCAN'
+        self.directorio_graficas = self.directorio_base / 'graficas_DBSCAN'
+        self.directorio_metricas = self.directorio_base / 'metricas_DBSCAN'
     
     def crear_directorios(self) -> None:
         directorios = [self.directorio_modelos, self.directorio_graficas, self.directorio_metricas]
         for directorio in directorios:
-            os.makedirs(directorio, exist_ok=True)
+            directorio.mkdir(parents=True, exist_ok=True)
 
 class ProcesadorDatos:
     
@@ -270,9 +279,9 @@ class AnalizadorDistancias:
             plt.ylabel(f'Distancia al {k}to vecino más cercano')
             plt.grid(True, alpha=0.3)
             
-            ruta_grafica = os.path.join(directorio_graficas, 'k_distance_graph.png')
-            plt.savefig(ruta_grafica, dpi=300, bbox_inches='tight')
-            plt.close()
+            ruta_grafica = directorio_graficas / 'k_distance_graph.png'
+            plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
+            plt.close("all")
             
             logging.info(f"Gráfica de k-distancias guardada en {ruta_grafica}")
         except Exception as e:
@@ -412,9 +421,9 @@ class VisualizadorClusters:
             # Grid consistente
             plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
             
-            ruta_grafica = os.path.join(directorio_graficas, 'clusters_2d_pca.png')
-            plt.savefig(ruta_grafica, dpi=300, bbox_inches='tight')
-            plt.close()
+            ruta_grafica = directorio_graficas / 'clusters_2d_pca.png'
+            plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
+            plt.close("all")
             
             logging.info(f"Visualización 2D guardada en {ruta_grafica}")
         except Exception as e:
@@ -478,9 +487,9 @@ class VisualizadorClusters:
             
             ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
             
-            ruta_grafica = os.path.join(directorio_graficas, 'clusters_3d_pca.png')
-            plt.savefig(ruta_grafica, dpi=300, bbox_inches='tight')
-            plt.close()
+            ruta_grafica = directorio_graficas / 'clusters_3d_pca.png'
+            plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
+            plt.close("all")
             
             logging.info(f"Visualización 3D guardada en {ruta_grafica}")
         except Exception as e:
@@ -640,7 +649,7 @@ def main():
     tracemalloc.start()
     
     try:
-        directorio_script = os.path.dirname(os.path.abspath(__file__))
+        directorio_script = Path(__file__).parent
         gestor_directorios = GestorDirectorios(directorio_script)
         gestor_directorios.crear_directorios()
         
@@ -651,7 +660,7 @@ def main():
         # Aplicar seeds para reproducibilidad
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        ruta_datos = os.path.join(directorio_script, 'data.csv')
+        ruta_datos = directorio_script / 'data.csv'
         datos_originales = ProcesadorDatos.cargar_datos(ruta_datos)
         logging.info(f"Datos cargados: {len(datos_originales)} filas")
         
@@ -724,8 +733,8 @@ def main():
         memoria_max = memoria_pico / 1024**2  # Convertir a MB
         tracemalloc.stop()
         
-        logging.info(f"⏱️  Tiempo total de ejecución: {tiempo_total:.2f} segundos")
-        logging.info(f"💾 Memoria máxima utilizada: {memoria_max:.2f} MB")
+        logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
+        logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
         VisualizadorClusters.visualizar_clusters_2d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
         VisualizadorClusters.visualizar_clusters_3d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
