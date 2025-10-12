@@ -19,10 +19,13 @@ Este proyecto implementa y compara **cuatro algoritmos** de Machine Learning no 
 ```
 Algoritmos-de-ML-no-supervisados-para-PdM/
 │
+├── data.csv                           # Dataset centralizado (500k+ registros)
+├── config.py                          # Configuración compartida
+├── README.md                          # Este archivo
+│
 ├── 1. Clustering/
 │   ├── DBSCAN/
 │   │   ├── DBSCAN.py
-│   │   ├── data.csv
 │   │   ├── README.md
 │   │   ├── graficas_DBSCAN/
 │   │   ├── metricas_DBSCAN/
@@ -30,7 +33,6 @@ Algoritmos-de-ML-no-supervisados-para-PdM/
 │   │
 │   ├── K-means/
 │   │   ├── K-means.py
-│   │   ├── data.csv
 │   │   ├── README.md
 │   │   ├── graficas_KMeans/
 │   │   ├── metricas_KMeans/
@@ -40,30 +42,24 @@ Algoritmos-de-ML-no-supervisados-para-PdM/
 │       ├── comparar_algoritmos.py
 │       └── [Resultados de comparación]
 │
-├── 2. Detección de Anomalías/
-│   ├── CBLOF (Cluster-Based Local Outlier Factor)/
-│   │   ├── CBLOF.PY
-│   │   ├── data.csv
-│   │   ├── README.md
-│   │   ├── graficas_CBLOF/
-│   │   ├── metricas_CBLOF/
-│   │   └── modelos_entrenados_CBLOF/
-│   │
-│   ├── Isolation Forest/
-│   │   ├── Isolation Forest.py
-│   │   ├── data.csv
-│   │   ├── README.md
-│   │   ├── graficas_IForest/
-│   │   ├── metricas_IForest/
-│   │   └── modelos_entrenados_IForest/
-│   │
-│   └── Comparaciones/
-│       ├── comparar_algoritmos.py
-│       └── [Resultados de comparación]
-│
-├── README.md                          # Este archivo
-├── README_COMPARACION.md              # Guía detallada de comparación
-└── CAMBIOS_REALIZADOS.md              # Log de cambios
+└── 2. Detección de Anomalías/
+    ├── CBLOF (Cluster-Based Local Outlier Factor)/
+    │   ├── CBLOF.PY
+    │   ├── README.md
+    │   ├── graficas_CBLOF/
+    │   ├── metricas_CBLOF/
+    │   └── modelos_entrenados_CBLOF/
+    │
+    ├── Isolation Forest/
+    │   ├── Isolation Forest.py
+    │   ├── README.md
+    │   ├── graficas_IForest/
+    │   ├── metricas_IForest/
+    │   └── modelos_entrenados_IForest/
+    │
+    └── Comparaciones/
+        ├── comparar_algoritmos.py
+        └── [Resultados de comparación]
 ```
 
 ## 🚀 Guía de Uso Rápida
@@ -204,8 +200,9 @@ pip install pyod
 ## ⚡ Optimizaciones de Rendimiento
 
 ### Muestreo Estratégico Unificado
-- **Optimización de parámetros**: 10,000 muestras consistentes entre todos los algoritmos
-- **Visualización**: 8,000 puntos para gráficas con reproducibilidad garantizada
+- **Optimización de parámetros**: 5,000 muestras consistentes entre todos los algoritmos
+- **Visualización**: 3,000 puntos para gráficas con reproducibilidad garantizada
+- **Cálculo de Silhouette**: 5,000 puntos muestreados para reducir complejidad O(n²)
 - **Seeds consistentes**: Semilla fija (42) aplicada en TODOS los muestreos aleatorios
 
 ### Gráficas 3D Mejoradas
@@ -250,8 +247,10 @@ pip install pyod
 
 ### Configuración Centralizada
 - **✅ `config.py`**: Archivo centralizado con todas las constantes globales
+- **✅ `data.csv`**: Dataset único compartido (500k+ registros) en la raíz del proyecto
 - **✅ Funciones compartidas**: `normalizar_scores_min_max()`, `validar_datos_entrada()`, `aplicar_pca_consistente()`
-- **✅ Consistencia garantizada**: Todos los algoritmos usan la misma configuración
+- **✅ Optimización de métricas**: `SILHOUETTE_SAMPLE` para cálculo eficiente en datasets grandes
+- **✅ Consistencia garantizada**: Todos los algoritmos usan la misma configuración y datos
 
 ## 🎓 Características de los Algoritmos
 

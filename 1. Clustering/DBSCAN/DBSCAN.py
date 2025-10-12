@@ -47,6 +47,7 @@ SCATTER_SIZE_NOISE = config.SCATTER_SIZE_NOISE
 CMAP_CLUSTERING = config.CMAP_CLUSTERING
 RANDOM_STATE = config.RANDOM_STATE
 BATCH_SIZE = config.BATCH_SIZE
+SILHOUETTE_SAMPLE = config.SILHOUETTE_SAMPLE
 
 class ConfiguradorLogging:
     
@@ -312,7 +313,10 @@ class OptimizadorDBSCAN:
             if n_clusters_unicos < 2:
                 return None
             
-            silhouette = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+            # Usar muestra para Silhouette
+            n_sil = min(SILHOUETTE_SAMPLE, len(X_sin_ruido))
+            silhouette = silhouette_score(X_sin_ruido, etiquetas_sin_ruido, 
+                                         sample_size=n_sil, random_state=RANDOM_STATE)
             calinski_harabasz = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
             davies_bouldin = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
             
@@ -595,7 +599,9 @@ class DetectorAnomalias:
                 X_sin_ruido = X_escalado[mascara_sin_ruido]
                 etiquetas_sin_ruido = etiquetas[mascara_sin_ruido]
                 
-                metricas_df.loc[0, 'silhouette_score'] = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+                n_sil = min(SILHOUETTE_SAMPLE, len(X_sin_ruido))
+                metricas_df.loc[0, 'silhouette_score'] = silhouette_score(X_sin_ruido, etiquetas_sin_ruido,
+                                                                          sample_size=n_sil, random_state=RANDOM_STATE)
                 metricas_df.loc[0, 'calinski_harabasz_score'] = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
                 metricas_df.loc[0, 'davies_bouldin_score'] = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
             
@@ -635,7 +641,8 @@ def main():
         
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        ruta_datos = directorio_script / 'data.csv'
+        # Usar archivo de datos centralizado en la raíz del proyecto
+        ruta_datos = directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
         datos_originales = ProcesadorDatos.cargar_datos(ruta_datos)
         logging.info(f"Datos cargados: {len(datos_originales)} filas")
         
@@ -668,7 +675,9 @@ def main():
             
             if n_clusters_unicos >= 2:
                 try:
-                    silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+                    n_sil = min(SILHOUETTE_SAMPLE, len(X_sin_ruido))
+                    silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido,
+                                                       sample_size=n_sil, random_state=RANDOM_STATE)
                     calinski_harabasz_final = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
                     davies_bouldin_final = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
                 except ValueError as e:

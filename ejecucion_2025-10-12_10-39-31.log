@@ -1,0 +1,28 @@
+﻿
+2025-10-12 10:39:31 [INFO] Iniciando proceso de ejecucion automatizada
+2025-10-12 10:39:31 [INFO] Directorio de trabajo: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM
+2025-10-12 10:39:31 [INFO] Archivo de log: .\ejecucion_2025-10-12_10-39-31.log
+2025-10-12 10:39:31 [SUCCESS] Entorno virtual encontrado: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\.venv\Scripts\python.exe
+2025-10-12 10:39:31 [SUCCESS]   [OK] numpy
+2025-10-12 10:39:32 [SUCCESS]   [OK] pandas
+2025-10-12 10:39:33 [SUCCESS]   [OK] sklearn
+2025-10-12 10:39:33 [SUCCESS]   [OK] matplotlib
+2025-10-12 10:39:35 [SUCCESS]   [OK] pyod
+2025-10-12 10:39:35 [SUCCESS]   [OK] joblib
+2025-10-12 10:39:36 [SUCCESS]   [OK] h5py
+2025-10-12 10:39:36 [SUCCESS]   [OK] scipy
+2025-10-12 10:39:37 [SUCCESS]   [OK] numba
+2025-10-12 10:39:37 [SUCCESS] Todas las dependencias estan instaladas
+2025-10-12 10:39:37 [INFO] Iniciando K-Means
+2025-10-12 10:40:05 [SUCCESS] K-Means completado exitosamente
+2025-10-12 10:40:05 [INFO] Iniciando DBSCAN
+2025-10-12 10:41:38 [SUCCESS] DBSCAN completado exitosamente
+2025-10-12 10:41:38 [INFO] Iniciando Isolation Forest
+2025-10-12 10:41:54 [SUCCESS] Isolation Forest completado exitosamente
+2025-10-12 10:41:54 [INFO] Iniciando CBLOF
+2025-10-12 10:42:13 [SUCCESS] CBLOF completado exitosamente
+2025-10-12 10:42:13 [INFO] Iniciando Comparacion de Clustering
+2025-10-12 10:42:17 [SUCCESS] Comparacion de Clustering completado exitosamente
+2025-10-12 10:42:17 [INFO] Iniciando Comparacion de Deteccion de Anomalias
+2025-10-12 10:42:23 [SUCCESS] Comparacion de Deteccion de Anomalias completado exitosamente
+2025-10-12 10:42:23 [SUCCESS] Proceso de ejecucion automatizada finalizado

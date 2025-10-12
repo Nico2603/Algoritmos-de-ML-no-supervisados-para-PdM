@@ -8,6 +8,10 @@ import warnings
 RANDOM_STATE = 42
 MAX_MUESTRAS_OPTIMIZACION = 5000
 MAX_MUESTRAS_VISUALIZATION = 3000
+SILHOUETTE_SAMPLE = 5000  # Muestra para calcular Silhouette (evita O(n²))
+
+# Ruta centralizada del archivo de datos (compartido por todos los algoritmos)
+RUTA_DATOS_COMPARTIDA = 'data.csv'
 
 try:
     N_JOBS_PARALELO = min(2, max(1, multiprocessing.cpu_count() // 2))

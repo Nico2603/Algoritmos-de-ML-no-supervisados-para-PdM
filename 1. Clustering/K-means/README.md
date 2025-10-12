@@ -21,7 +21,6 @@ Agrupar datos de acelerómetro en K clusters para identificar patrones de operac
 ```
 K-means/
 ├── K-means.py                         # Script principal
-├── data.csv                           # Dataset de entrada
 ├── README.md                          # Este archivo
 │
 ├── graficas_KMeans/                   # Gráficas generadas
@@ -60,12 +59,14 @@ python K-means.py
 ```
 
 El script ejecutará automáticamente:
-1. ✅ Carga y preprocesamiento de datos
+1. ✅ Carga y preprocesamiento de datos (desde `data.csv` en la raíz del proyecto)
 2. ✅ Búsqueda del K óptimo (número de clusters)
 3. ✅ Generación de gráficas de evaluación (codo, silhouette, etc.)
 4. ✅ Entrenamiento del modelo final con K óptimo
 5. ✅ Generación de visualizaciones de clusters
 6. ✅ Cálculo de scores de anomalía (distancia a centroides)
+
+**Nota**: El archivo `data.csv` se encuentra centralizado en la raíz del proyecto y es compartido por todos los algoritmos.
 
 ## 📊 Métricas Generadas
 
@@ -106,8 +107,9 @@ El script busca automáticamente el K óptimo en el rango **reducido para veloci
 ```python
 K_MIN = 2
 K_MAX = 6  # Reducido de 8 a 6 para ejecución rápida
-MAX_MUESTRAS_OPTIMIZACION = 15000  # Muestreo estratégico 
-MAX_MUESTRAS_VISUALIZATION = 10000  # Muestreo para gráficas
+MAX_MUESTRAS_OPTIMIZACION = 5000   # Muestreo estratégico 
+MAX_MUESTRAS_VISUALIZATION = 3000  # Muestreo para gráficas
+SILHOUETTE_SAMPLE = 5000           # Muestra para cálculo eficiente de Silhouette
 ```
 
 Selección basada en el **Silhouette Score máximo**.
@@ -137,7 +139,10 @@ Para grandes datasets, ajusta:
 
 ```python
 MAX_MUESTRAS_OPTIMIZACION = 50000  # Máximo para búsqueda de K
+SILHOUETTE_SAMPLE = 10000          # Muestra para cálculo de Silhouette en datasets grandes
 ```
+
+**Nota**: El parámetro `SILHOUETTE_SAMPLE` optimiza el cálculo del Silhouette Score usando muestreo estratificado, reduciendo la complejidad O(n²) sin pérdida significativa de precisión.
 
 ## 🔍 Interpretación de Resultados
 

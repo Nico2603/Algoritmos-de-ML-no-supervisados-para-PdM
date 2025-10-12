@@ -1,0 +1,8 @@
+Métrica,CBLOF,Isolation Forest
+Algoritmo,CBLOF,Isolation_Forest
+Porcentaje de Anomalías (%),10.00,10.00
+Separación de Scores (P95-P50),0.3239,0.3883
+Score Promedio,0.4424,0.3842
+Número de Clusters (si aplica),5,N/A
+Tiempo de Ejecución (s),13.03,12.31
+Memoria Máxima (MB),92.56,64.13

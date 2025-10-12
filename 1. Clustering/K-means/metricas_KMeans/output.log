@@ -1,0 +1,55 @@
+Iniciando proceso de clustering con K-Means...
+Datos cargados correctamente desde: C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\data.csv
+Forma del dataset: (518400, 4)
+Columnas cargadas: ['fecha', 'acceleration_x', 'acceleration_y', 'acceleration_z']
+Primeras 3 filas del dataset:
+  Fila 0: {'fecha': Timestamp('2025-01-01 00:00:00'), 'acceleration_x': 2.102560520172119, 'acceleration_y': 10.213203430175781, 'acceleration_z': -2.059213161468506}
+  Fila 1: {'fecha': Timestamp('2025-01-01 00:00:05'), 'acceleration_x': 2.102633237838745, 'acceleration_y': 12.161409378051758, 'acceleration_z': -2.2197675704956055}
+  Fila 2: {'fecha': Timestamp('2025-01-01 00:00:10'), 'acceleration_x': 0.3403279185295105, 'acceleration_y': 9.105401039123535, 'acceleration_z': 0.7304587364196777}
+Tipos de datos por columna:
+  fecha: datetime64[ns]
+  acceleration_x: float32
+  acceleration_y: float32
+  acceleration_z: float32
+No se encontraron valores faltantes.
+Dataset final: 518400 filas
+Estadísticas básicas de las características:
+
+       acceleration_x  acceleration_y  acceleration_z
+count   518400.000000   518400.000000   518400.000000
+mean        -0.094727        9.634219       -0.639829
+std          2.333566        2.522127        1.795920
+min         -4.182035        5.212644       -3.787344
+25%         -2.026987        7.547929       -2.128429
+50%         -0.093418        9.634616       -0.637234
+75%          1.834094       11.721862        0.847826
+max          3.997792       14.053226        2.504745
+Característica 'magnitud_aceleracion' añadida.
+Datos escalados correctamente.
+Dataset reducido para optimización: 518400 -> 5000 muestras
+Número óptimo de clusters seleccionado: K=2
+Gráfico guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\elbow_method.png
+Gráfico guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\silhouette_scores.png
+Gráfico guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\calinski_harabasz_scores.png
+Gráfico guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\davies_bouldin_scores.png
+Modelo K-Means entrenado con el número óptimo de clusters.
+Silhouette Score: 0.3269
+Calinski-Harabasz Score: 300079.1875
+Davies-Bouldin Score: 1.2372
+Inercia (SSE): 1313348.75
+Puntuación de anomalías calculada y normalizada [0, 1].
+Outliers detectados: 25920 (5.00%) usando percentil 95
+Tiempo total de ejecucion: 11.75 segundos
+Memoria maxima utilizada: 188.05 MB
+Métricas guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\metricas_KMeans\metrics.txt
+Scores guardados en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\metricas_KMeans\anomaly_scores.csv
+Métricas CSV guardadas en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\metricas_KMeans\metrics.csv
+Modelo guardado como pickle en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\modelos_entrenados_KMeans\kmeans_model.pkl
+Escalador guardado en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\modelos_entrenados_KMeans\scaler.pkl
+Modelo guardado como h5 en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\modelos_entrenados_KMeans\kmeans_model.h5
+Dataset reducido para visualización: 518400 -> 3000 muestras
+Visualización de clusters 2D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\clusters_2d_pca.png
+Dataset reducido para visualización: 518400 -> 3000 muestras
+Visualización de clusters 3D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\clusters_3d_pca.png
+Visualización de anomalías 2D guardada en C:\Users\Lenovo\Documents\GitHub\Algoritmos-de-ML-no-supervisados-para-PdM\1. Clustering\K-means\graficas_KMeans\anomalies_pca.png
+Proceso completado exitosamente.

@@ -14,10 +14,14 @@
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
+$env:PYTHONUNBUFFERED = "1"
 
 $env:MPLBACKEND = "Agg"
 $env:PYTHONHASHSEED = "0"
 $env:OMP_NUM_THREADS = "1"
+$env:OPENBLAS_NUM_THREADS = "1"
+$env:MKL_NUM_THREADS = "1"
+$env:NUMEXPR_NUM_THREADS = "1"
 
 # Colores para output
 $ColorExito = "Green"
@@ -59,6 +63,7 @@ function Write-Log {
 }
 
 $global:PasosFallidos = @()
+$global:VenvPath = ""
 
 function RunStep {
     param(
@@ -74,10 +79,13 @@ function RunStep {
     
     Write-Log "Iniciando $Title" "INFO"
     
-    # Ejecutar el script de Python directamente, mostrando output en tiempo real
-    # Python ya tiene su propio logging interno, así que no necesitamos duplicarlo aquí
-    & $VenvPath $ScriptPath
+    # Ejecutar el script de Python directamente con streaming en tiempo real
+    & $global:VenvPath $ScriptPath
     $exitCode = $LASTEXITCODE
+    
+    if ($null -eq $exitCode) {
+        $exitCode = 0
+    }
     
     if ($exitCode -eq 0) {
         Write-Log "$Title completado exitosamente" "SUCCESS"
@@ -100,9 +108,9 @@ Write-Host ""
 # ============================================================================
 Write-Host "[1/6] Verificando entorno virtual..." -ForegroundColor $ColorInfo
 
-$VenvPath = Join-Path $ScriptDir ".venv\Scripts\python.exe"
+$global:VenvPath = Join-Path $ScriptDir ".venv\Scripts\python.exe"
 
-if (-Not (Test-Path $VenvPath)) {
+if (-Not (Test-Path $global:VenvPath)) {
     Write-Log "ERROR: No se encontro el entorno virtual en .venv\" "ERROR"
     Write-Log "Por favor, crea el entorno virtual primero:" "ERROR"
     Write-Log "  python -m venv .venv" "ERROR"
@@ -111,7 +119,7 @@ if (-Not (Test-Path $VenvPath)) {
     exit 1
 }
 
-Write-Log "Entorno virtual encontrado: $VenvPath" "SUCCESS"
+Write-Log "Entorno virtual encontrado: $global:VenvPath" "SUCCESS"
 Write-Host ""
 
 # ============================================================================
@@ -123,8 +131,7 @@ $RequiredModules = @("numpy", "pandas", "sklearn", "matplotlib", "pyod", "joblib
 $MissingModules = @()
 
 foreach ($Module in $RequiredModules) {
-    $CheckCmd = "& '$VenvPath' -c 'import $Module' 2>&1"
-    $Result = Invoke-Expression $CheckCmd
+    & $global:VenvPath -c "import $Module" 2>$null
     
     if ($LASTEXITCODE -ne 0) {
         $MissingModules += $Module
@@ -176,13 +183,13 @@ Write-Host ""
 
 # 4.1 Isolation Forest
 Write-Host "  >> Ejecutando Isolation Forest..." -ForegroundColor $ColorInfo
-$IForestPath = "$ScriptDir\2. Detección de Anomalías\Isolation Forest\Isolation Forest.py"
+$IForestPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\Isolation Forest\Isolation Forest.py"
 RunStep "Isolation Forest" $IForestPath
 Write-Host ""
 
 # 4.2 CBLOF
 Write-Host "  >> Ejecutando CBLOF..." -ForegroundColor $ColorInfo
-$CBLOFPath = "$ScriptDir\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\CBLOF.PY"
+$CBLOFPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\CBLOF\CBLOF.PY"
 RunStep "CBLOF" $CBLOFPath
 Write-Host ""
 
@@ -200,7 +207,7 @@ Write-Host ""
 
 # 5.2 Comparacion Deteccion de Anomalias
 Write-Host "  >> Comparando Algoritmos de Deteccion de Anomalias (Isolation Forest vs CBLOF)..." -ForegroundColor $ColorInfo
-$CompAnomaliesPath = "$ScriptDir\2. Detección de Anomalías\Comparaciones\comparar_algoritmos.py"
+$CompAnomaliesPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\comparar_algoritmos.py"
 RunStep "Comparacion de Deteccion de Anomalias" $CompAnomaliesPath
 Write-Host ""
 
@@ -217,12 +224,12 @@ Write-Host ""
 
 # Verificar archivos generados
 $ArchivosEsperados = @(
-    ".\1. Clustering\K-means\metricas_KMeans\metrics.csv",
-    ".\1. Clustering\DBSCAN\metricas_DBSCAN\metrics.csv",
-    "$ScriptDir\2. Detección de Anomalías\Isolation Forest\metricas_IForest\metrics.csv",
-    "$ScriptDir\2. Detección de Anomalías\CBLOF (Cluster-Based Local Outlier Factor)\metricas_CBLOF\metrics.csv",
-    ".\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt",
-    "$ScriptDir\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt"
+    (Join-Path $ScriptDir "1. Clustering\K-means\metricas_KMeans\metrics.csv"),
+    (Join-Path $ScriptDir "1. Clustering\DBSCAN\metricas_DBSCAN\metrics.csv"),
+    (Join-Path $ScriptDir "2. Deteccion de Anomalias\Isolation Forest\metricas_IForest\metrics.csv"),
+    (Join-Path $ScriptDir "2. Deteccion de Anomalias\CBLOF\metricas_CBLOF\metrics.csv"),
+    (Join-Path $ScriptDir "1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt"),
+    (Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")
 )
 
 $ArchivosGenerados = 0
@@ -273,8 +280,8 @@ Write-Host "Log completo guardado en: $LogFile" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $(if ($ExitCodeFinal -eq 0) { $ColorExito } else { $ColorAdvertencia })
-Write-Host "  1. Comparacion Clustering: .\1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt" -ForegroundColor $ColorInfo
-Write-Host "  2. Comparacion Deteccion de Anomalias: $ScriptDir\2. Detección de Anomalías\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt" -ForegroundColor $ColorInfo
+Write-Host "  1. Comparacion Clustering: $(Join-Path $ScriptDir "1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt")" -ForegroundColor $ColorInfo
+Write-Host "  2. Comparacion Deteccion de Anomalias: $(Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host ""

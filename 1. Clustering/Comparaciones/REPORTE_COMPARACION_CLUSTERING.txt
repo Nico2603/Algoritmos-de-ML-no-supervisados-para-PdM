@@ -1,0 +1,96 @@
+====================================================================================================
+                         REPORTE DE COMPARACIÓN DE ALGORITMOS DE CLUSTERING
+                                        DBSCAN vs K-Means
+====================================================================================================
+
+1. TABLA COMPARATIVA DE MÉTRICAS
+----------------------------------------------------------------------------------------------------
+                       Métrica DBSCAN     K-Means
+                     Algoritmo DBSCAN     K-Means
+            Número de Clusters      1           2
+              Silhouette Score    N/A      0.3269
+       Calinski-Harabasz Score    N/A 300079.1875
+          Davies-Bouldin Index    N/A      1.2372
+   Porcentaje de Anomalías (%)   0.00        5.00
+Separación de Scores (P95-P50) 0.0000      0.3360
+                Score Promedio 0.0000      0.5038
+       Tiempo de Ejecución (s)  85.89       11.75
+           Memoria Máxima (MB) 192.40      188.05
+
+2. ANÁLISIS DE RESULTADOS POR MÉTRICA
+----------------------------------------------------------------------------------------------------
+✓ Mejor Silhouette Score: K-Means
+✓ Mejor Calinski-Harabasz Score: K-Means
+✓ Mejor Davies-Bouldin Index: K-Means
+
+3. PUNTUACIÓN FINAL
+----------------------------------------------------------------------------------------------------
+DBSCAN: 0/3 métricas
+K-Means: 3/3 métricas
+
+4. ALGORITMO GANADOR
+----------------------------------------------------------------------------------------------------
+🏆 GANADOR: K-Means
+
+K-Means demostró mejor rendimiento en la mayoría de las métricas de clustering.
+
+5. CARACTERÍSTICAS Y CONSIDERACIONES
+----------------------------------------------------------------------------------------------------
+
+DBSCAN:
+  Ventajas:
+    ✓ Detecta clusters de forma arbitraria (no solo esféricos)
+    ✓ Identifica automáticamente outliers (puntos de ruido)
+    ✓ No requiere especificar el número de clusters a priori
+    ✓ Funciona bien con clusters de densidad variable
+  Desventajas:
+    ✗ Sensible a la elección de parámetros (eps, min_samples)
+    ✗ Puede tener problemas con clusters de densidad muy diferente
+    ✗ Rendimiento puede degradarse en alta dimensionalidad
+
+K-Means:
+  Ventajas:
+    ✓ Algoritmo simple y rápido
+    ✓ Escalable a grandes datasets
+    ✓ Funciona bien cuando los clusters son esféricos y de tamaño similar
+    ✓ Asignación determinística de puntos a clusters
+  Desventajas:
+    ✗ Requiere especificar el número de clusters a priori
+    ✗ Sensible a inicialización y outliers
+    ✗ Asume clusters de forma esférica
+    ✗ No identifica outliers automáticamente
+
+6. DETALLES ADICIONALES
+----------------------------------------------------------------------------------------------------
+Número de Clusters:
+  DBSCAN: 1
+  K-Means: 2
+
+Porcentaje de Anomalías Detectadas:
+  DBSCAN: 0.00%
+  K-Means: 5.00% (Detecta outliers con percentil 95)
+
+Métricas de Rendimiento:
+  Tiempo de Ejecución:
+    DBSCAN: 85.89s
+    K-Means: 11.75s
+    ⚡ K-Means es más rápido
+
+  Uso de Memoria Máxima:
+    DBSCAN: 192.40 MB
+    K-Means: 188.05 MB
+    [MEMORIA] K-Means usa menos memoria
+
+7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN
+----------------------------------------------------------------------------------------------------
+  • comparacion_visual_2d.png - Comparación lado a lado de gráficas 2D
+  • comparacion_visual_3d.png - Comparación lado a lado de gráficas 3D
+  • comparacion_metricas_barras.png - Gráfico de barras comparativo
+  • comparacion_metricas_radar.png - Gráfico de radar multidimensional
+  • comparacion_rendimiento.png - Gráfico de rendimiento (tiempo y memoria)
+  • tabla_comparativa.csv - Tabla de métricas en formato CSV
+  • REPORTE_COMPARACION_CLUSTERING.txt - Este archivo
+
+====================================================================================================
+Fecha de generación: Octubre 2025
+====================================================================================================

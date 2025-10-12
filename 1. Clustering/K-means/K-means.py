@@ -10,6 +10,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.utils import check_random_state
 import joblib
 import h5py
 import logging
@@ -41,6 +42,7 @@ PCA_COMPONENTS_2D = 2
 PCA_COMPONENTS_3D = 3
 MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION
 MAX_MUESTRAS_VISUALIZATION = config.MAX_MUESTRAS_VISUALIZATION
+SILHOUETTE_SAMPLE = config.SILHOUETTE_SAMPLE
 USECOLS = config.USECOLS
 CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
 CARACTERISTICA_MAGNITUD = config.CARACTERISTICA_MAGNITUD
@@ -221,7 +223,11 @@ class KMeansAnalyzer:
         labels = kmeans.labels_
         
         inertia_k = kmeans.inertia_
-        silhouette_k = silhouette_score(self.X_escalado, labels)
+        
+        # Usar muestra para Silhouette (evita O(n²) en datasets grandes)
+        n_sil = min(SILHOUETTE_SAMPLE, len(self.X_escalado))
+        silhouette_k = silhouette_score(self.X_escalado, labels, sample_size=n_sil, random_state=RANDOM_STATE)
+        
         calinski_k = calinski_harabasz_score(self.X_escalado, labels)
         davies_k = davies_bouldin_score(self.X_escalado, labels)
         
@@ -303,10 +309,15 @@ class KMeansAnalyzer:
         
         self.labels = self.kmeans_final.labels_
         self.cluster_centers = self.kmeans_final.cluster_centers_
+        
+        # Usar muestra para Silhouette en dataset completo
+        n_sil = min(SILHOUETTE_SAMPLE, len(self.X_escalado))
+        
         self.metricas_finales = {
             'k_optimo': k_optimo,
             'inertia': self.kmeans_final.inertia_,
-            'silhouette': silhouette_score(self.X_escalado, self.labels),
+            'silhouette': silhouette_score(self.X_escalado, self.labels, 
+                                           sample_size=n_sil, random_state=RANDOM_STATE),
             'calinski_harabasz': calinski_harabasz_score(self.X_escalado, self.labels),
             'davies_bouldin': davies_bouldin_score(self.X_escalado, self.labels)
         }
@@ -506,7 +517,8 @@ class KMeansAnalyzer:
         try:
             config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
             
-            ruta_datos = self.directorio_script / 'data.csv'
+            # Usar archivo de datos centralizado en la raíz del proyecto
+            ruta_datos = self.directorio_script.parent.parent / config.RUTA_DATOS_COMPARTIDA
             self.cargar_datos(ruta_datos)
             self.escalar_datos()
             

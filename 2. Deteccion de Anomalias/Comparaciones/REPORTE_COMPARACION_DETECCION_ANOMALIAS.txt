@@ -1,0 +1,102 @@
+====================================================================================================
+                  REPORTE DE COMPARACIÓN DE ALGORITMOS DE DETECCIÓN DE ANOMALÍAS
+                                   CBLOF vs Isolation Forest
+====================================================================================================
+
+1. TABLA COMPARATIVA DE MÉTRICAS
+----------------------------------------------------------------------------------------------------
+                       Métrica  CBLOF Isolation Forest
+                     Algoritmo  CBLOF Isolation_Forest
+   Porcentaje de Anomalías (%)  10.00            10.00
+Separación de Scores (P95-P50) 0.3239           0.3883
+                Score Promedio 0.4424           0.3842
+Número de Clusters (si aplica)      5              N/A
+       Tiempo de Ejecución (s)  13.03            12.31
+           Memoria Máxima (MB)  92.56            64.13
+
+2. ANÁLISIS DE RESULTADOS POR MÉTRICA
+----------------------------------------------------------------------------------------------------
+✓ Mejor Separación de Scores (P95-P50): Isolation Forest
+  Separación CBLOF: 0.3239
+  Separación Isolation Forest: 0.3883
+
+✓ Detección de Anomalías: Empate (similar)
+  CBLOF: 10.00%
+  Isolation Forest: 10.00%
+
+3. PUNTUACIÓN FINAL (Separación pesa doble)
+----------------------------------------------------------------------------------------------------
+CBLOF: 0 puntos
+Isolation Forest: 2 puntos
+
+4. ALGORITMO GANADOR
+----------------------------------------------------------------------------------------------------
+🏆 GANADOR: Isolation Forest
+
+Isolation Forest demostró mejor rendimiento, especialmente en la separación de anomalías.
+
+5. CARACTERÍSTICAS Y CONSIDERACIONES
+----------------------------------------------------------------------------------------------------
+
+CBLOF (Cluster-Based Local Outlier Factor):
+  Ventajas:
+    ✓ Utiliza clustering para contexto local
+    ✓ Bueno para detectar anomalías locales dentro de clusters
+    ✓ Considera la densidad y estructura de los datos
+    ✓ Puede identificar diferentes tipos de anomalías
+  Desventajas:
+    ✗ Requiere especificar número de clusters
+    ✗ Más sensible a la elección de parámetros
+    ✗ Puede ser más lento en grandes datasets
+    ✗ Complejidad computacional mayor
+
+Isolation Forest:
+  Ventajas:
+    ✓ Basado en ensemble de árboles de decisión
+    ✓ Rápido y escalable a grandes volúmenes de datos
+    ✓ Funciona bien con datos de alta dimensionalidad
+    ✓ No requiere clustering previo
+  Desventajas:
+    ✗ Puede ser sensible al parámetro de contaminación
+    ✗ Menos interpretable que métodos basados en distancia
+    ✗ Puede tener problemas con distribuciones no uniformes
+
+6. INTERPRETACIÓN DE MÉTRICAS CLAVE
+----------------------------------------------------------------------------------------------------
+Separación de Scores (P95-P50):
+  • Mide la diferencia entre el percentil 95 y el percentil 50 de scores
+  • Mayor valor = mejor separación entre anomalías y datos normales
+  • Métrica CRÍTICA para confiabilidad de detecciones
+  • Indica qué tan claramente el algoritmo distingue anomalías
+
+Porcentaje de Anomalías:
+  • Porcentaje de puntos clasificados como anomalías
+  • Debe evaluarse en contexto del dominio específico
+  • No necesariamente 'más es mejor'
+  • Ideal: coincide con la tasa real esperada de anomalías
+
+Métricas de Rendimiento:
+  Tiempo de Ejecución:
+    CBLOF: 13.03s
+    Isolation Forest: 12.31s
+    ⚡ Isolation Forest es más rápido
+
+  Uso de Memoria Máxima:
+    CBLOF: 92.56 MB
+    Isolation Forest: 64.13 MB
+    [MEMORIA] Isolation Forest usa menos memoria
+
+7. ARCHIVOS GENERADOS EN ESTA COMPARACIÓN
+----------------------------------------------------------------------------------------------------
+  • comparacion_visual_scores.png - Comparación de distribución de scores
+  • comparacion_visual_3d.png - Comparación de visualización 3D
+  • comparacion_metricas_barras.png - Gráfico de barras comparativo
+  • comparacion_porcentaje_anomalias.png - Comparación de porcentajes
+  • comparacion_separacion_scores.png - Comparación de separación
+  • comparacion_rendimiento.png - Gráfico de rendimiento (tiempo y memoria)
+  • tabla_comparativa.csv - Tabla de métricas en formato CSV
+  • REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt - Este archivo
+
+====================================================================================================
+Fecha de generación: Octubre 2025
+====================================================================================================

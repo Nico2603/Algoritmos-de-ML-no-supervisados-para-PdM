@@ -22,7 +22,6 @@ Identificar grupos naturales en datos de acelerómetro para Mantenimiento Predic
 ```
 DBSCAN/
 ├── DBSCAN.py                          # Script principal
-├── data.csv                           # Dataset de entrada
 ├── README.md                          # Este archivo
 │
 ├── graficas_DBSCAN/                   # Gráficas generadas
@@ -58,12 +57,14 @@ python DBSCAN.py
 ```
 
 El script ejecutará automáticamente:
-1. ✅ Carga y preprocesamiento de datos
+1. ✅ Carga y preprocesamiento de datos (desde `data.csv` en la raíz del proyecto)
 2. ✅ Optimización automática de parámetros (eps, min_samples)
 3. ✅ Entrenamiento del modelo
 4. ✅ Generación de visualizaciones
 5. ✅ Cálculo de métricas de calidad
 6. ✅ Detección y guardado de anomalías
+
+**Nota**: El archivo `data.csv` se encuentra centralizado en la raíz del proyecto y es compartido por todos los algoritmos.
 
 ## 📊 Métricas Generadas
 
@@ -128,9 +129,12 @@ min_samples_min = 3
 min_samples_max = 4
 
 # Muestreo optimizado
-MAX_MUESTRAS_OPTIMIZACION = 8000   # Optimización de parámetros
-MAX_MUESTRAS_VISUALIZATION = 8000  # Visualizaciones
+MAX_MUESTRAS_OPTIMIZACION = 5000   # Optimización de parámetros
+MAX_MUESTRAS_VISUALIZATION = 3000  # Visualizaciones
+SILHOUETTE_SAMPLE = 5000           # Muestra para cálculo eficiente de Silhouette
 ```
+
+**Nota**: El parámetro `SILHOUETTE_SAMPLE` optimiza el cálculo del Silhouette Score usando muestreo, reduciendo la complejidad O(n²) para datasets grandes.
 
 ## 🔍 Interpretación de Resultados
 
