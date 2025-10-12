@@ -70,10 +70,27 @@ El script ejecutará automáticamente:
 
 **Nota**: El archivo `data.csv` se encuentra centralizado en la raíz del proyecto y es compartido por todos los algoritmos.
 
+## 📊 Resultados Obtenidos
+
+### Parámetros Óptimos
+- **n_clusters**: 5, **alpha**: 0.8, **beta**: 5, **use_weights**: True
+- **Tiempo**: 14.53s | **Memoria**: 92.75 MB
+
+### Métricas Clave
+- **Separación P95-P50**: 0.3239 (ligeramente inferior a Isolation Forest)
+- **Anomalías Detectadas**: 51,840 (10.00%)
+- **Score Promedio**: 0.4424
+
+### Análisis
+✅ **Fortalezas**: Detección basada en clustering, interpretable
+❌ **Desventajas**: Separación inferior a Isolation Forest (0.3239 vs 0.3772), más lento (14.5s vs 10.9s), más memoria (92.7MB vs 64.2MB)
+
+**Resultado**: Isolation Forest es superior en este dataset.
+
 ## 📊 Métricas Generadas
 
 ### Métricas de Optimización
-- **Separación de Scores (P95-P50)**: Qué tan bien se distinguen anomalías de normales (mayor es mejor)
+- **Separación de Scores (P95-P50)**: 0.3239 (mayor es mejor)
 - **Desviación estándar de scores**: Variabilidad en las puntuaciones
 - **Media de scores**: Score promedio de todos los puntos
 

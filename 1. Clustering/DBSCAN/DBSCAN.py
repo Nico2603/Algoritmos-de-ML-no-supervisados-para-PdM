@@ -246,37 +246,15 @@ class ProcesadorDatos:
         logging.info(f"Dataset reducido para visualización: {len(X)} -> {len(X_reducido)} muestras")
         return X_reducido, etiquetas_reducidas
 
-class AnalizadorDistancias:
-    
-    @staticmethod
-    def generar_grafica_k_distancias(X_escalado: np.ndarray, directorio_graficas: str, k: int = 5) -> None:
-        try:
-            vecinos = NearestNeighbors(n_neighbors=k)
-            vecinos_ajustados = vecinos.fit(X_escalado)
-            distancias, _ = vecinos_ajustados.kneighbors(X_escalado)
-            distancias_ordenadas = np.sort(distancias[:, k-1], axis=0)
-            
-            plt.figure(figsize=(10, 6))
-            plt.plot(distancias_ordenadas)
-            plt.title(f'Gráfica de {k}-distancias para estimar eps')
-            plt.xlabel('Puntos ordenados')
-            plt.ylabel(f'Distancia al {k}to vecino más cercano')
-            plt.grid(True, alpha=0.3)
-            
-            ruta_grafica = directorio_graficas / 'k_distance_graph.png'
-            plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
-            plt.close("all")
-            
-            logging.info(f"Gráfica de k-distancias guardada en {ruta_grafica}")
-        except Exception as e:
-            logging.error(f"Error al generar gráfica de k-distancias: {str(e)}")
 
 class OptimizadorDBSCAN:
     
     @staticmethod
-    def generar_grilla_parametros(eps_min: float = 0.3, eps_max: float = 1.2, 
-                                 n_eps: int = 4, min_samples_min: int = 3, 
-                                 min_samples_max: int = 5) -> List[Dict[str, Any]]:
+    def generar_grilla_parametros(eps_min: float = config.DBSCAN_EPS_MIN, 
+                                 eps_max: float = config.DBSCAN_EPS_MAX, 
+                                 n_eps: int = config.DBSCAN_EPS_STEPS, 
+                                 min_samples_min: int = config.DBSCAN_MIN_SAMPLES_MIN, 
+                                 min_samples_max: int = config.DBSCAN_MIN_SAMPLES_MAX) -> List[Dict[str, Any]]:
         valores_eps = np.linspace(eps_min, eps_max, n_eps)
         valores_min_samples = range(min_samples_min, min_samples_max + 1)
         
@@ -371,52 +349,9 @@ class OptimizadorDBSCAN:
         logging.info(f"  - Parámetros: eps={mejor_resultado['parametros']['eps']:.3f}, min_samples={mejor_resultado['parametros']['min_samples']}")
         logging.info(f"  - Silhouette Score: {mejor_resultado['silhouette']:.4f}")
         logging.info("Búsqueda de parámetros completada")
-        return mejor_resultado
+        return mejor_resultado, resultados_validos
 
 class VisualizadorClusters:
-    
-    @staticmethod
-    def visualizar_clusters_2d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
-                              directorio_graficas: str, titulo: str = "Clustering DBSCAN (2D)") -> None:
-        try:
-            pca = PCA(n_components=2, random_state=RANDOM_STATE)
-            X_pca = pca.fit_transform(X_escalado)
-            
-            X_vis, etiquetas_vis = ProcesadorDatos.reducir_muestra_para_visualizacion(X_pca, etiquetas)
-            
-            n_clusters = len(set(etiquetas_vis)) - (1 if -1 in etiquetas_vis else 0)
-            n_ruido = np.sum(etiquetas_vis == -1)
-            
-            etiquetas_unicas = set(etiquetas_vis)
-            colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
-            
-            plt.figure(figsize=config.FIGSIZE_2D)
-            for etiqueta, color in zip(etiquetas_unicas, colores):
-                mascara = etiquetas_vis == etiqueta
-                puntos = X_vis[mascara]
-                
-                if etiqueta == -1:
-                    plt.scatter(puntos[:, 0], puntos[:, 1], c='black', marker='x', 
-                              s=SCATTER_SIZE_NOISE, alpha=0.7, label='Ruido')
-                else:
-                    plt.scatter(puntos[:, 0], puntos[:, 1], c=[color], marker='o', 
-                              s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
-            
-            plt.title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
-                     fontsize=14, pad=15)
-            plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
-            plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
-            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-            
-            plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
-            
-            ruta_grafica = directorio_graficas / 'clusters_2d_pca.png'
-            plt.savefig(ruta_grafica, dpi=200, bbox_inches='tight')
-            plt.close("all")
-            
-            logging.info(f"Visualización 2D guardada en {ruta_grafica}")
-        except Exception as e:
-            logging.error(f"Error en visualización 2D: {str(e)}")
     
     @staticmethod
     def visualizar_clusters_3d(X_escalado: np.ndarray, etiquetas: np.ndarray, 
@@ -479,6 +414,40 @@ class VisualizadorClusters:
             logging.info(f"Visualización 3D guardada en {ruta_grafica}")
         except Exception as e:
             logging.error(f"Error en visualización 3D: {str(e)}")
+    
+    
+    @staticmethod
+    def visualizar_anomalias(datos: pd.DataFrame, anomaly_scores: np.ndarray, 
+                            etiquetas: np.ndarray, X_escalado: np.ndarray, 
+                            directorio_graficas: Path) -> None:
+        """Visualiza anomalías detectadas con mapa de calor"""
+        try:
+            X_pca, _ = config.aplicar_pca_consistente(X_escalado, n_components=2)
+            
+            indices_vis = config.muestrear_datos_consistente(X_escalado, config.MAX_MUESTRAS_VISUALIZATION)
+            X_pca_vis = X_pca[indices_vis]
+            scores_vis = anomaly_scores[indices_vis]
+            
+            fig, ax = plt.subplots(figsize=config.FIGSIZE_2D)
+            scatter = ax.scatter(X_pca_vis[:, 0], X_pca_vis[:, 1], 
+                                c=scores_vis, cmap='YlOrRd', 
+                                s=config.SCATTER_SIZE_NORMAL, alpha=0.6)
+            
+            cbar = plt.colorbar(scatter, ax=ax)
+            cbar.set_label('Anomaly Score', fontsize=12)
+            
+            ax.set_xlabel('Componente Principal 1', fontsize=12)
+            ax.set_ylabel('Componente Principal 2', fontsize=12)
+            ax.set_title('DBSCAN: Mapa de Scores de Anomalía', fontsize=14, fontweight='bold')
+            ax.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            plt.savefig(directorio_graficas / 'anomalies_pca.png', dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            logging.info("Visualización de anomalías generada exitosamente")
+        except Exception as e:
+            logging.error(f"Error al generar visualización de anomalías: {str(e)}")
 
 class GuardadorModelos:
     
@@ -649,12 +618,10 @@ def main():
         datos_procesados, matriz_caracteristicas = ProcesadorDatos.preprocesar_datos(datos_originales)
         X_escalado, escalador = ProcesadorDatos.escalar_datos(matriz_caracteristicas)
         
-        AnalizadorDistancias.generar_grafica_k_distancias(X_escalado, gestor_directorios.directorio_graficas)
-        
         X_para_optimizacion, indices_muestra = ProcesadorDatos.reducir_muestra_para_optimizacion(X_escalado)
         
         grilla_parametros = OptimizadorDBSCAN.generar_grilla_parametros()
-        mejor_resultado = OptimizadorDBSCAN.buscar_mejores_parametros(X_para_optimizacion, grilla_parametros)
+        mejor_resultado, resultados_validos = OptimizadorDBSCAN.buscar_mejores_parametros(X_para_optimizacion, grilla_parametros)
         
         mejores_parametros = mejor_resultado['parametros']
         logging.info(f"Aplicando mejores parámetros al dataset completo...")
@@ -735,8 +702,18 @@ def main():
         logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
-        VisualizadorClusters.visualizar_clusters_2d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
         VisualizadorClusters.visualizar_clusters_3d(X_escalado, etiquetas_finales, gestor_directorios.directorio_graficas)
+        
+        # Calcular scores de anomalía para visualización
+        anomaly_scores = DetectorAnomalias.calcular_scores_todos_los_puntos(etiquetas_finales, X_escalado, modelo_final)
+        
+        # Visualizar anomalías
+        if len(np.unique(etiquetas_finales)) > 1:
+            VisualizadorClusters.visualizar_anomalias(
+                datos_procesados, anomaly_scores, etiquetas_finales, 
+                X_escalado, gestor_directorios.directorio_graficas
+            )
+            logging.info("Visualización de anomalías generada")
         
         DetectorAnomalias.identificar_anomalias(datos_procesados, etiquetas_finales, X_escalado, modelo_final, 
                                                gestor_directorios.directorio_metricas, tiempo_total, memoria_max)

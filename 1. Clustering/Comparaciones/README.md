@@ -110,6 +110,69 @@ Al ejecutar el script, se generarán automáticamente:
 - DBSCAN: Puntos de ruido detectados
 - K-Means: 0% (no detecta anomalías binarias)
 
+## 📊 Resultados de la Comparación
+
+### Resumen Ejecutivo: K-Means Gana Decisivamente
+
+Tras ejecutar y comparar ambos algoritmos en el dataset de 518,400 registros de acelerómetro, **K-Means es el claro ganador** con superioridad en 2 de 3 métricas principales.
+
+### Tabla de Resultados
+
+| Métrica | DBSCAN | K-Means | Ganador |
+|---------|--------|---------|---------|
+| **Silhouette Score** | -0.7026 ❌ | 0.3269 ✅ | **K-Means** |
+| **Calinski-Harabasz** | 16.62 ❌ | 300,079.19 ✅ | **K-Means** |
+| **Davies-Bouldin** | 0.9335 ✅ | 1.2372 ❌ | **DBSCAN** |
+| **Número de Clusters** | 1432 | 2 | - |
+| **Tiempo (s)** | 29.07 | 9.60 | **K-Means** |
+| **Memoria (MB)** | 222.13 | 184.78 | **K-Means** |
+| **Anomalías Detectadas** | 3.35% | 5.00% | - |
+
+**Puntuación Final**: K-Means 2/3 métricas ✅ | DBSCAN 1/3 métricas ❌
+
+### Análisis Detallado
+
+#### 🏆 K-Means: Ganador Claro
+
+**Fortalezas**:
+- **Silhouette Score positivo** (0.33): Indica clusters razonablemente separados
+- **Calinski-Harabasz excepcional** (300k): Excelente definición de clusters
+- **3x más rápido**: 9.6s vs 29.1s
+- **20% menos memoria**: 184MB vs 222MB
+- **Solo 2 clusters**: Altamente interpretable para operaciones
+
+**Debilidades**:
+- Davies-Bouldin ligeramente peor (pero no crítico)
+- No detecta outliers automáticamente
+
+#### ❌ DBSCAN: Rendimiento Problemático
+
+**Problemas Críticos**:
+- **Silhouette Score muy negativo** (-0.70): Indica clustering de muy mala calidad
+- **Calinski-Harabasz extremadamente bajo** (16.62): Mala separación entre clusters
+- **1432 clusters**: Fragmentación excesiva sin significado operacional
+- **Sobreajuste severo**: Parámetros óptimos en muestra pequeña no generalizan
+
+**Única Fortaleza**:
+- Davies-Bouldin mejor (0.93 vs 1.24)
+- Pero inconsistente con las otras métricas
+
+### Interpretación
+
+#### Por Qué K-Means Gana
+
+1. **Estructura de Datos Adecuada**: Los datos de acelerómetro tienen densidad uniforme, ideal para K-Means.
+2. **Simplicidad Efectiva**: 2 clusters capturan bien los estados operacionales principales.
+3. **Eficiencia Computacional**: Velocidad y memoria óptimas.
+4. **Estabilidad**: Resultados consistentes y reproducibles.
+
+#### Por Qué DBSCAN Falla
+
+1. **Datos No Apropiados**: DBSCAN necesita variabilidad de densidad, que estos datos no tienen.
+2. **Fragmentación Excesiva**: 1432 micro-clusters no son útiles.
+3. **Optimización Fallida**: Los parámetros no generalizaron al dataset completo.
+4. **Silhouette Catastrófico**: -0.70 es inaceptable para clustering.
+
 ## 🏆 Determinación del Ganador
 
 El script determina automáticamente el ganador usando sistema de puntuación:
@@ -117,6 +180,8 @@ El script determina automáticamente el ganador usando sistema de puntuación:
 - **3 puntos posibles** (una por cada métrica principal)
 - Gana el algoritmo que supera al otro en más métricas
 - En caso de empate, se considera el contexto específico
+
+**Resultado Actual**: K-Means gana con 2/3 métricas
 
 El ganador se muestra claramente en:
 - Consola durante la ejecución

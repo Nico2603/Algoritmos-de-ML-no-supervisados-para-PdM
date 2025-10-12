@@ -269,37 +269,6 @@ class KMeansAnalyzer:
         
         return k_optimo, metricas, resultados
     
-    def _crear_grafico_metrica(self, k_range: range, valores: List[float], 
-                              titulo: str, ylabel: str, nombre_archivo: str) -> None:
-        plt.figure(figsize=FIGSIZE_2D)
-        plt.plot(k_range, valores, 'bx-', linewidth=2, markersize=8)
-        plt.xlabel('Número de Clusters K')
-        plt.ylabel(ylabel)
-        plt.title(titulo)
-        plt.grid(True, alpha=0.3)
-        
-        ruta_grafico = self.directorio_graficas / nombre_archivo
-        plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
-        plt.close("all")
-        
-        logging.info(f"Gráfico guardado en {ruta_grafico}")
-    
-    def crear_graficos_evaluacion(self, metricas: Dict[str, List[float]]) -> None:
-        K_range = range(K_MIN, K_MAX)
-        
-        configuraciones = [
-            (metricas['inercia'], 'Método del Codo para determinar el número óptimo de clusters',
-             'Inercia', 'elbow_method.png'),
-            (metricas['silhouette'], 'Coeficiente Silhouette para diferentes valores de K',
-             'Coeficiente Silhouette', 'silhouette_scores.png'),
-            (metricas['calinski'], 'Índice Calinski-Harabasz para diferentes valores de K',
-             'Índice Calinski-Harabasz', 'calinski_harabasz_scores.png'),
-            (metricas['davies'], 'Índice Davies-Bouldin para diferentes valores de K',
-             'Índice Davies-Bouldin', 'davies_bouldin_scores.png')
-        ]
-        
-        for valores, titulo, ylabel, nombre_archivo in configuraciones:
-            self._crear_grafico_metrica(K_range, valores, titulo, ylabel, nombre_archivo)
     
     def entrenar_modelo_final(self, k_optimo: int, resultados: List[Tuple]) -> None:
         resultado_optimo = next(res for res in resultados if res[0] == k_optimo)
@@ -416,35 +385,9 @@ class KMeansAnalyzer:
         
         distancias = self.datos['anomaly_score'].values
         
-        self._crear_visualizacion_2d_clusters(X_pca_2d, pca_2d)
         self._crear_visualizacion_3d_clusters(X_pca_3d, pca_3d)
         
         self._crear_visualizacion_2d_anomalias(X_pca_2d, distancias)
-    
-    def _crear_visualizacion_2d_clusters(self, X_pca: np.ndarray, pca: PCA) -> None:
-        X_vis, labels_vis = self.reducir_muestra_para_visualizacion(X_pca, self.labels)
-        
-        n_clusters = len(np.unique(labels_vis))
-        
-        plt.figure(figsize=FIGSIZE_2D)
-        scatter = plt.scatter(X_vis[:, 0], X_vis[:, 1], c=labels_vis, 
-                            cmap=CMAP_CLUSTERING, s=SCATTER_SIZE, alpha=0.7)
-        
-        plt.title(f'Clustering K-Means (2D con PCA)\n'
-                 f'Clusters: {n_clusters} | Muestras: {len(X_vis):,}',
-                 fontsize=14, pad=15)
-        
-        plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
-        plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
-        plt.legend(*scatter.legend_elements(), title="Clusters", loc='best')
-        
-        plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
-        
-        ruta_clusters_2d = self.directorio_graficas / 'clusters_2d_pca.png'
-        plt.savefig(ruta_clusters_2d, dpi=200, bbox_inches='tight')
-        plt.close("all")
-        
-        logging.info(f"Visualización de clusters 2D guardada en {ruta_clusters_2d}")
     
     def _crear_visualizacion_2d_anomalias(self, X_pca: np.ndarray, distancias: np.ndarray) -> None:
         plt.figure(figsize=FIGSIZE_2D)
@@ -523,8 +466,6 @@ class KMeansAnalyzer:
             self.escalar_datos()
             
             k_optimo, metricas, resultados = self.encontrar_k_optimo()
-            
-            self.crear_graficos_evaluacion(metricas)
             
             self.entrenar_modelo_final(k_optimo, resultados)
             

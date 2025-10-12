@@ -62,6 +62,98 @@ Algoritmos-de-ML-no-supervisados-para-PdM/
         └── [Resultados de comparación]
 ```
 
+## 🏆 Resultados y Conclusiones
+
+### Resumen Ejecutivo
+
+Tras ejecutar y comparar exhaustivamente los 4 algoritmos en un dataset real de **518,400 registros** de acelerómetro, los resultados son claros:
+
+#### 🥇 Ganadores
+
+| Categoría | Algoritmo Ganador | Puntuación | Razón Principal |
+|-----------|-------------------|------------|-----------------|
+| **Clustering** | **K-Means** ✅ | 2/3 métricas | Excelente separación (Calinski-Harabasz: 300k), 3x más rápido |
+| **Detección de Anomalías** | **Isolation Forest** ✅ | 2 puntos | Mejor separación de scores (0.3772), más eficiente |
+
+### Resultados Detallados por Categoría
+
+#### 🔵 Clustering: K-Means vs DBSCAN
+
+**K-Means Domina Claramente**
+
+| Métrica | K-Means | DBSCAN | Ganador |
+|---------|---------|--------|---------|
+| Silhouette Score | 0.3269 ✅ | -0.7026 ❌ | **K-Means** |
+| Calinski-Harabasz | 300,079 ✅ | 16.62 ❌ | **K-Means** |
+| Davies-Bouldin | 1.2372 | 0.9335 ✅ | DBSCAN |
+| Clusters | 2 (interpretable) | 1432 (fragmentado) | **K-Means** |
+| Tiempo | 9.6s ✅ | 29.1s | **K-Means** |
+| Memoria | 184.78 MB ✅ | 222.13 MB | **K-Means** |
+
+**Conclusión Clustering**: 
+- ✅ **Usar K-Means** para datos de acelerómetro
+- ❌ **Evitar DBSCAN** en este tipo de dataset (fragmentación extrema, silhouette negativo)
+
+#### 🔴 Detección de Anomalías: Isolation Forest vs CBLOF
+
+**Isolation Forest es Superior**
+
+| Métrica | Isolation Forest | CBLOF | Ganador |
+|---------|------------------|-------|---------|
+| Separación P95-P50 | 0.3772 ✅ | 0.3239 | **Isolation Forest** |
+| Tiempo | 10.94s ✅ | 14.53s | **Isolation Forest** |
+| Memoria | 64.22 MB ✅ | 92.75 MB | **Isolation Forest** |
+| Anomalías | 10.00% | 10.00% | Empate |
+
+**Conclusión Detección de Anomalías**:
+- ✅ **Usar Isolation Forest** como primera opción
+- ✅ CBLOF es válido pero inferior en métricas clave
+
+### 💡 Recomendaciones Finales para Mantenimiento Predictivo
+
+#### Estrategia Recomendada
+
+1. **Para Segmentación Operacional**: Usar **K-Means**
+   - Identifica 2 estados operacionales principales
+   - Interpretación clara y directa
+   - Velocidad óptima para monitoreo continuo
+
+2. **Para Detección de Anomalías**: Usar **Isolation Forest**
+   - Mejor separación entre normal y anómalo
+   - Más eficiente computacionalmente
+   - No requiere configuración compleja
+
+3. **Estrategia Combinada** (Recomendado):
+   - Aplicar K-Means para segmentar modos operacionales
+   - Aplicar Isolation Forest dentro de cada segmento para detectar anomalías específicas
+   - Monitorear evolución de centroides como indicador de degradación
+
+#### Implementación en Producción
+
+```python
+# 1. Segmentar con K-Means
+estado_operacional = kmeans.predict(datos_nuevos)
+
+# 2. Detectar anomalías con Isolation Forest
+score_anomalia = isolation_forest.score_samples(datos_nuevos)
+
+# 3. Alertar si:
+#    - Anomalía detectada (score < umbral)
+#    - Cambio frecuente de estado operacional
+#    - Desplazamiento de centroides
+```
+
+### 📊 Métricas de Rendimiento Global
+
+| Algoritmo | Tiempo (s) | Memoria (MB) | Eficiencia |
+|-----------|------------|--------------|------------|
+| K-Means | 9.60 | 184.78 | ⭐⭐⭐⭐⭐ |
+| Isolation Forest | 10.94 | 64.22 | ⭐⭐⭐⭐⭐ |
+| CBLOF | 14.53 | 92.75 | ⭐⭐⭐ |
+| DBSCAN | 29.07 | 222.13 | ⭐⭐ |
+
+**Dataset**: 518,400 registros | 4 características
+
 ## 🚀 Guía de Uso Rápida
 
 ### 1. Ejecutar Algoritmos Individuales

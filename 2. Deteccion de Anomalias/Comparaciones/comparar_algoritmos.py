@@ -85,7 +85,7 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     print("\nGenerando comparacion visual de graficas...")
     
     fig = plt.figure(figsize=(18, 8))
-    gs = GridSpec(1, 2, figure=fig)
+    gs = GridSpec(1, 2, figure=fig, wspace=0.15, hspace=0.1)
     
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['CBLOF']['grafica_scores'])
@@ -100,8 +100,8 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     ax2.axis('off')
     
     plt.suptitle('Comparación Visual: CBLOF vs Isolation Forest (Distribución de Scores)', 
-                fontsize=16, fontweight='bold', y=0.98)
-    plt.tight_layout()
+                fontsize=16, fontweight='bold', y=0.95)
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
     
     ruta_comparacion_scores = DIRECTORIO_COMPARACIONES / 'comparacion_visual_scores.png'
     plt.savefig(ruta_comparacion_scores, dpi=200, bbox_inches='tight')
@@ -109,7 +109,7 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     print(f"[OK] Comparacion de scores guardada: {ruta_comparacion_scores.name}")
     
     fig = plt.figure(figsize=(18, 8))
-    gs = GridSpec(1, 2, figure=fig)
+    gs = GridSpec(1, 2, figure=fig, wspace=0.15, hspace=0.1)
     
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['CBLOF']['grafica_3d'])
@@ -124,8 +124,8 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     ax2.axis('off')
     
     plt.suptitle('Comparación Visual: CBLOF vs Isolation Forest (Visualización 3D)', 
-                fontsize=16, fontweight='bold', y=0.98)
-    plt.tight_layout()
+                fontsize=16, fontweight='bold', y=0.95)
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
     
     ruta_comparacion_3d = DIRECTORIO_COMPARACIONES / 'comparacion_visual_3d.png'
     plt.savefig(ruta_comparacion_3d, dpi=200, bbox_inches='tight')
@@ -211,9 +211,14 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     ax.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
     def autolabel(rects):
-        for rect in rects:
+        for i, rect in enumerate(rects):
             height = rect.get_height()
-            ax.annotate(f'{height:.3f}',
+            # Determinar formato según la métrica (i es el índice de la barra)
+            if i == 0:  # Porcentaje de anomalías
+                texto = f'{height:.2f}'
+            else:  # Separación y Score Promedio
+                texto = f'{height:.3f}'
+            ax.annotate(texto,
                        xy=(rect.get_x() + rect.get_width() / 2, height),
                        xytext=(0, 3),
                        textcoords="offset points",
@@ -227,58 +232,6 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     plt.savefig(ruta_grafico, dpi=200, bbox_inches='tight')
     plt.close("all")
     print(f"[OK] Grafico de barras guardado: {ruta_grafico.name}")
-    
-    crear_graficos_individuales(metricas_cblof, metricas_iforest)
-
-
-def crear_graficos_individuales(metricas_cblof: pd.DataFrame, 
-                                metricas_iforest: pd.DataFrame) -> None:
-    fig, ax = plt.subplots(figsize=(11, 7))
-    
-    algoritmos = ['CBLOF', 'Isolation Forest']
-    porcentajes = [
-        metricas_cblof['pct_anomalias'].values[0],
-        metricas_iforest['pct_anomalias'].values[0]
-    ]
-    
-    colors = ['mediumseagreen', 'mediumpurple']
-    bars = ax.barh(algoritmos, porcentajes, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
-    
-    ax.set_xlabel('Porcentaje de Anomalías Detectadas (%)', fontsize=13, fontweight='bold')
-    ax.set_title('Comparación de Porcentaje de Anomalías Detectadas', fontsize=15, fontweight='bold', pad=15)
-    ax.grid(axis='x', alpha=0.4, linestyle='--', linewidth=0.8)
-    
-    for i, (bar, valor) in enumerate(zip(bars, porcentajes)):
-        ax.text(valor + 0.3, i, f'{valor:.2f}%', va='center', fontweight='bold', fontsize=12)
-    
-    plt.tight_layout()
-    ruta_porcentajes = DIRECTORIO_COMPARACIONES / 'comparacion_porcentaje_anomalias.png'
-    plt.savefig(ruta_porcentajes, dpi=200, bbox_inches='tight')
-    plt.close("all")
-    print(f"[OK] Grafico de porcentajes guardado: {ruta_porcentajes.name}")
-    
-    fig, ax = plt.subplots(figsize=(11, 7))
-    
-    separaciones = [
-        metricas_cblof['p95_minus_p50'].values[0],
-        metricas_iforest['p95_minus_p50'].values[0]
-    ]
-    
-    bars = ax.barh(algoritmos, separaciones, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
-    
-    ax.set_xlabel('Separación de Scores (P95 - P50)', fontsize=13, fontweight='bold')
-    ax.set_title('Comparación de Separación entre Anomalías y Datos Normales', 
-                fontsize=15, fontweight='bold', pad=15)
-    ax.grid(axis='x', alpha=0.4, linestyle='--', linewidth=0.8)
-    
-    for i, (bar, valor) in enumerate(zip(bars, separaciones)):
-        ax.text(valor + 0.05, i, f'{valor:.4f}', va='center', fontweight='bold', fontsize=12)
-    
-    plt.tight_layout()
-    ruta_separacion = DIRECTORIO_COMPARACIONES / 'comparacion_separacion_scores.png'
-    plt.savefig(ruta_separacion, dpi=200, bbox_inches='tight')
-    plt.close("all")
-    print(f"[OK] Grafico de separacion guardado: {ruta_separacion.name}")
 
 
 def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFrame) -> None:
@@ -504,8 +457,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write("  • comparacion_visual_scores.png - Comparación de distribución de scores\n")
         f.write("  • comparacion_visual_3d.png - Comparación de visualización 3D\n")
         f.write("  • comparacion_metricas_barras.png - Gráfico de barras comparativo\n")
-        f.write("  • comparacion_porcentaje_anomalias.png - Comparación de porcentajes\n")
-        f.write("  • comparacion_separacion_scores.png - Comparación de separación\n")
         f.write("  • comparacion_rendimiento.png - Gráfico de rendimiento (tiempo y memoria)\n")
         f.write("  • tabla_comparativa.csv - Tabla de métricas en formato CSV\n")
         f.write("  • REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt - Este archivo\n\n")

@@ -1,2 +1,0 @@
-algoritmo,params_json,n_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,pct_anomalias,p95_minus_p50,mean_score,tiempo_ejecucion_s,memoria_max_mb
-Isolation_Forest,"{'contamination': 0.1, 'max_features': 1.0, 'max_samples': 'auto', 'n_estimators': 50}",,,,,9.999807098765432,0.38827327674800216,0.38421125130970024,12.307379484176636,64.13232040405273

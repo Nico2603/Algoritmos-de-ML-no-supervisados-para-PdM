@@ -394,13 +394,14 @@ def calcular_metricas_adicionales(modelo: CBLOF, X_escalado: np.ndarray) -> Dict
         Diccionario con las métricas calculadas
     """
     binary_labels = modelo.labels_
-    anomaly_scores = modelo.decision_scores_
+    anomaly_scores_raw = modelo.decision_scores_
+    anomaly_scores = config.normalizar_scores_min_max(anomaly_scores_raw)
     
     n_anomalias = np.sum(binary_labels)
     porcentaje_anomalias = (n_anomalias / len(binary_labels)) * 100
     
     logging.info(f"Anomalías detectadas: {n_anomalias} ({porcentaje_anomalias:.2f}%)")
-    logging.info(f"Rango de scores de anomalía: {np.min(anomaly_scores):.4f} - {np.max(anomaly_scores):.4f}")
+    logging.info(f"Rango de scores de anomalía (normalizados): {np.min(anomaly_scores):.4f} - {np.max(anomaly_scores):.4f}")
     
     media_puntuaciones_anomalia = np.mean(anomaly_scores)
     
@@ -415,7 +416,8 @@ def calcular_metricas_adicionales(modelo: CBLOF, X_escalado: np.ndarray) -> Dict
 
 
 def guardar_metricas(metricas: Dict[str, Any], metricas_adicionales: Dict[str, Any],
-                    mejores_parametros: Dict[str, Any], directorio_metricas: Path) -> None:
+                    mejores_parametros: Dict[str, Any], directorio_metricas: Path,
+                    anomaly_scores_normalized: np.ndarray = None) -> None:
     """
     Guarda todas las métricas en un archivo de texto.
     
@@ -424,15 +426,24 @@ def guardar_metricas(metricas: Dict[str, Any], metricas_adicionales: Dict[str, A
         metricas_adicionales: Métricas adicionales calculadas
         mejores_parametros: Mejores parámetros encontrados
         directorio_metricas: Directorio donde guardar las métricas
+        anomaly_scores_normalized: Scores normalizados (0-1) para calcular separación consistente
     """
     ruta_metricas = directorio_metricas / ARCHIVO_METRICAS
+    
+    # Calcular separación con scores normalizados si están disponibles
+    if anomaly_scores_normalized is not None:
+        p95_norm = np.percentile(anomaly_scores_normalized, 95)
+        p50_norm = np.percentile(anomaly_scores_normalized, 50)
+        separacion_normalizada = p95_norm - p50_norm
+    else:
+        separacion_normalizada = metricas['separacion_scores']
     
     with open(ruta_metricas, 'w', encoding='utf-8') as f:
         f.write("=== MÉTRICAS DEL MODELO CBLOF ===\n\n")
         f.write(f"Mejores parámetros: {mejores_parametros}\n\n")
         
         f.write("Métricas de optimización:\n")
-        f.write(f"Separación de scores (P95-P50): {metricas['separacion_scores']:.4f}\n")
+        f.write(f"Separación de scores (P95-P50): {separacion_normalizada:.4f}\n")
         f.write(f"Desviación estándar de scores: {metricas['std_scores']:.4f}\n")
         f.write(f"Media de scores: {metricas['mean_scores']:.4f}\n\n")
         
@@ -490,7 +501,8 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         datos: Datos originales
         directorio_graficas: Directorio donde guardar las gráficas
     """
-    anomaly_scores = modelo.decision_scores_
+    anomaly_scores_raw = modelo.decision_scores_
+    anomaly_scores = config.normalizar_scores_min_max(anomaly_scores_raw)
     
     plt.ioff()
     
@@ -498,7 +510,7 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         plt.figure(figsize=(10, 6))
         plt.hist(anomaly_scores, bins=50, alpha=0.7, edgecolor='black')
         plt.title('Distribución de las Puntuaciones de Anomalía (CBLOF)', fontsize=14)
-        plt.xlabel('Puntuación de Anomalía', fontsize=12)
+        plt.xlabel('Anomaly Score (Normalizado 0-1)', fontsize=12)
         plt.ylabel('Frecuencia', fontsize=12)
         plt.grid(True, alpha=0.3)
         
@@ -571,7 +583,9 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
     """
     try:
         datos_salida = datos.copy()
-        datos_salida['anomaly_score'] = modelo.decision_scores_
+        anomaly_scores_raw = modelo.decision_scores_
+        anomaly_scores = config.normalizar_scores_min_max(anomaly_scores_raw)
+        datos_salida['anomaly_score'] = anomaly_scores
         datos_salida['is_outlier'] = modelo.labels_
         
         ruta_salida_completa = directorio_metricas / 'anomaly_scores.csv'
@@ -642,8 +656,12 @@ def main() -> None:
         
         metricas_adicionales = calcular_metricas_adicionales(mejor_modelo, X_escalado)
         
+        # Obtener scores normalizados para métricas consistentes
+        anomaly_scores_raw = mejor_modelo.decision_scores_
+        anomaly_scores_normalized = config.normalizar_scores_min_max(anomaly_scores_raw)
         
-        guardar_metricas(metricas, metricas_adicionales, mejores_parametros, directorio_metricas)
+        guardar_metricas(metricas, metricas_adicionales, mejores_parametros, directorio_metricas,
+                        anomaly_scores_normalized)
         guardar_modelo(mejor_modelo, directorio_modelos)
         
         ruta_escalador = directorio_modelos / 'scaler.pkl'

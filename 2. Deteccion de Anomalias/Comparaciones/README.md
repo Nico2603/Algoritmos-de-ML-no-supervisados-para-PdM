@@ -107,6 +107,19 @@ Al ejecutar el script, se generarán automáticamente:
 - Indicador general del comportamiento del modelo
 - Para contexto y referencia
 
+## 📊 Resultados de la Comparación
+
+### Resumen Ejecutivo: Isolation Forest Gana
+**Isolation Forest** es el ganador claro con mejor separación de scores y eficiencia superior.
+
+| Métrica | CBLOF | Isolation Forest | Ganador |
+|---------|-------|------------------|---------|
+| **Separación P95-P50** | 0.3239 | 0.3772 ✅ | **Isolation Forest** |
+| **Tiempo (s)** | 14.53 | 10.94 ✅ | **Isolation Forest** |
+| **Memoria (MB)** | 92.75 | 64.22 ✅ | **Isolation Forest** |
+
+**Puntuación**: Isolation Forest 2 | CBLOF 0
+
 ## 🏆 Determinación del Ganador
 
 El script determina automáticamente el ganador usando sistema de puntuación ponderado:

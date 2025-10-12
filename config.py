@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import warnings
 
 RANDOM_STATE = 42
-MAX_MUESTRAS_OPTIMIZACION = 5000
+MAX_MUESTRAS_OPTIMIZACION = 10000
 MAX_MUESTRAS_VISUALIZATION = 3000
 SILHOUETTE_SAMPLE = 5000  # Muestra para calcular Silhouette (evita O(n²))
 
@@ -40,6 +40,20 @@ CARACTERISTICAS_BASE = ['acceleration_x', 'acceleration_y', 'acceleration_z']
 CARACTERISTICA_MAGNITUD = 'magnitud_aceleracion'
 
 BATCH_SIZE = 50000
+
+# ========== PARÁMETROS ESPECÍFICOS DBSCAN ==========
+DBSCAN_EPS_MIN = 0.01
+DBSCAN_EPS_MAX = 0.5
+DBSCAN_EPS_STEPS = 10
+DBSCAN_MIN_SAMPLES_MIN = 3
+DBSCAN_MIN_SAMPLES_MAX = 7
+
+# ========== PARÁMETROS ESPECÍFICOS K-MEANS ==========
+KMEANS_K_MIN = 2
+KMEANS_K_MAX = 6
+
+# ========== NORMALIZACIÓN DE SCORES ==========
+NORMALIZAR_SCORES_ANOMALIA = True
 
 def normalizar_scores_min_max(scores: np.ndarray) -> np.ndarray:
     min_score = np.min(scores)
@@ -162,6 +176,14 @@ __all__ = [
     'CARACTERISTICAS_BASE',
     'CARACTERISTICA_MAGNITUD',
     'BATCH_SIZE',
+    'DBSCAN_EPS_MIN',
+    'DBSCAN_EPS_MAX',
+    'DBSCAN_EPS_STEPS',
+    'DBSCAN_MIN_SAMPLES_MIN',
+    'DBSCAN_MIN_SAMPLES_MAX',
+    'KMEANS_K_MIN',
+    'KMEANS_K_MAX',
+    'NORMALIZAR_SCORES_ANOMALIA',
     'normalizar_scores_min_max',
     'validar_datos_entrada',
     'aplicar_pca_consistente',

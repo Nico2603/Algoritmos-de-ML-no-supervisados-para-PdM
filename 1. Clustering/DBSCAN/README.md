@@ -136,16 +136,92 @@ SILHOUETTE_SAMPLE = 5000           # Muestra para cálculo eficiente de Silhouet
 
 **Nota**: El parámetro `SILHOUETTE_SAMPLE` optimiza el cálculo del Silhouette Score usando muestreo, reduciendo la complejidad O(n²) para datasets grandes.
 
+## 📊 Resultados Obtenidos
+
+### Parámetros Óptimos Encontrados
+- **eps**: 0.0644
+- **min_samples**: 6
+- **Tiempo de Ejecución**: 29.07 segundos
+- **Memoria Utilizada**: 222.13 MB
+
+### Métricas de Calidad del Clustering
+| Métrica | Valor | Interpretación |
+|---------|-------|----------------|
+| **Silhouette Score** | -0.7026 | ⚠️ **Problemático** - Indica fuerte solapamiento entre clusters |
+| **Calinski-Harabasz** | 16.62 | Muy bajo - Pobre separación entre clusters |
+| **Davies-Bouldin** | 0.9335 | Bueno - Clusters bien definidos (menor es mejor) |
+| **Número de Clusters** | 1432 | Muy alto - Fragmentación extrema |
+| **Puntos de Ruido** | 17387 (3.35%) | Cantidad razonable de outliers |
+
+### Detección de Anomalías
+- **Porcentaje de Anomalías**: 3.35% (puntos clasificados como ruido)
+- **Separación P95-P50**: 0.2949
+- **Score Promedio**: 0.0379
+
+### ⚠️ Análisis Crítico de Resultados
+
+#### Problemas Identificados
+
+1. **Silhouette Score Negativo Severo (-0.7026)**:
+   - **Significado**: Los puntos están, en promedio, más cerca de puntos en otros clusters que de puntos en su propio cluster.
+   - **Causa**: Los parámetros óptimos encontrados (`eps=0.0644`, `min_samples=6`) crean micro-clusters muy pequeños y densos.
+   - **Impacto**: La calidad del clustering es **muy pobre** para este dataset.
+
+2. **Fragmentación Extrema (1432 Clusters)**:
+   - Con 518,400 puntos y 1432 clusters, hay ~362 puntos por cluster en promedio.
+   - Esto sugiere que DBSCAN está dividiendo los datos en fragmentos muy pequeños.
+   - No captura la estructura macro de los datos.
+
+3. **Discrepancia entre Métricas**:
+   - Davies-Bouldin (0.93) sugiere clusters bien definidos
+   - Silhouette (-0.70) y Calinski-Harabasz (16.62) indican lo contrario
+   - Esta contradicción señala que el clustering no es confiable
+
+4. **Optimización Paradójica**:
+   - Durante la optimización con muestra reducida (10,000 puntos), el Silhouette Score era **0.9853** ✅
+   - Al aplicar al dataset completo (518,400 puntos), cayó a **-0.7026** ❌
+   - Esto indica **sobreajuste severo** a la muestra de optimización
+
+#### ⚠️ Limitaciones Observadas
+
+1. **Escalabilidad Pobre**: 
+   - 29.07 segundos (3x más lento que K-Means)
+   - 222.13 MB (20% más memoria que K-Means)
+
+2. **Estructura de Datos No Adecuada**:
+   - Los datos de acelerómetro no tienen una estructura de densidad variable clara
+   - DBSCAN funciona mejor con clusters de diferente densidad (forma de "manchas")
+
+3. **Parámetros Críticos**:
+   - La dependencia de `eps` es extremadamente sensible
+   - Pequeños cambios en `eps` producen resultados radicalmente diferentes
+
 ## 🔍 Interpretación de Resultados
 
-### Clusters Válidos
-- El algoritmo identifica automáticamente el número de clusters
-- Cada punto pertenece a un cluster o es ruido (-1)
+### Visualizaciones Clave
+
+#### 1. **Gráfica 3D con PCA**
+- Muestra 83 clusters (en la visualización reducida a 3,000 puntos)
+- Muchos micro-clusters pequeños
+- Puntos de ruido (marcados con X) dispersos por todo el espacio
+- No se observa una estructura natural de clusters separados
+
+#### 2. **Mapa de Anomalías**
+- Los scores de anomalía son generalmente bajos (promedio 0.0379)
+- Indica que la mayoría de puntos no son considerados muy anómalos
+- Los outliers detectados (3.35%) están distribuidos espacialmente
+
+### Clusters e Interpretación
+
+- **1432 Clusters**: Demasiados para ser interpretables
+- **Micro-clustering**: Los clusters son demasiado pequeños para representar modos operacionales
+- **Sin Significado Operacional**: Es difícil extraer insights útiles de tantos clusters fragmentados
 
 ### Outliers/Anomalías
+- **3.35% de outliers** (17,387 puntos) es razonable
 - Puntos con `is_outlier = 1` son anomalías detectadas
 - `anomaly_score` indica qué tan anómalo es el punto (mayor = más anómalo)
-- Útil para mantenimiento predictivo: estos puntos pueden indicar fallos inminentes
+- Sin embargo, la baja separación (P95-P50 = 0.29) indica dificultad para distinguir anomalías claras
 
 ## 📊 Comparación con Otros Algoritmos
 
@@ -164,17 +240,95 @@ Esto generará:
 
 ## 🎓 Ventajas y Desventajas
 
-### ✅ Ventajas
+### ✅ Ventajas (Teóricas)
 - Detecta clusters de cualquier forma (no solo círculos/esferas)
 - No necesita saber cuántos clusters hay de antemano
 - Identifica outliers automáticamente
 - Robusto a ruido en los datos
+- Excelente para datos con estructura de densidad variable
 
-### ⚠️ Desventajas
-- Sensible a la elección de eps y min_samples
-- Puede tener problemas con clusters de densidad muy diferente
-- Computacionalmente más costoso que K-Means
-- Rendimiento puede degradarse en alta dimensionalidad
+### ⚠️ Desventajas (Observadas en Este Dataset)
+- **Muy sensible** a la elección de eps y min_samples
+- Puede tener problemas con clusters de densidad similar (**este caso**)
+- **3x más lento** que K-Means (29s vs 10s)
+- **20% más memoria** que K-Means
+- Rendimiento se degrada en alta dimensionalidad
+- **Sobreajuste severo** durante optimización de parámetros
+- **Fragmentación extrema** - genera demasiados micro-clusters sin significado
+
+### 🆚 Comparativa K-Means vs DBSCAN en Este Dataset
+
+| Aspecto | K-Means | DBSCAN | Ganador |
+|---------|---------|---------|---------|
+| **Silhouette Score** | 0.3269 ✅ | -0.7026 ❌ | **K-Means** |
+| **Calinski-Harabasz** | 300,079 ✅ | 16.62 ❌ | **K-Means** |
+| **Davies-Bouldin** | 1.2372 | 0.9335 ✅ | **DBSCAN** |
+| **Número de Clusters** | 2 ✅ (interpretable) | 1432 ❌ (fragmentado) | **K-Means** |
+| **Velocidad** | 9.6s ✅ | 29.1s ❌ | **K-Means** |
+| **Memoria** | 184.78 MB ✅ | 222.13 MB ❌ | **K-Means** |
+| **Interpretabilidad** | Alta ✅ | Muy baja ❌ | **K-Means** |
+
+**Resultado**: K-Means **domina claramente** en este dataset específico.
+
+## 🎯 Casos de Uso Recomendados
+
+### ✅ DBSCAN es Ideal Para:
+1. **Datos con Clusters de Diferentes Formas**: Anillos, formas alargadas, distribuciones no-esféricas.
+2. **Datos con Variabilidad de Densidad**: Cuando algunos clusters son densos y otros son dispersos.
+3. **Detección de Outliers Espaciales**: Cuando los outliers forman grupos aislados.
+4. **Datos Geoespaciales**: GPS, mapas, ubicaciones con agrupamientos naturales.
+5. **Datasets Pequeños a Medianos**: < 100,000 puntos idealmente.
+
+### ❌ DBSCAN NO es Adecuado Para (Este Caso):
+1. **Datos de Acelerómetro con Densidad Uniforme**: Como en este dataset ❌
+2. **Datasets Grandes**: > 500,000 puntos (complejidad O(n²)) ❌
+3. **Cuando se Necesita Velocidad**: DBSCAN es 3x más lento ❌
+4. **Cuando se Requiere Interpretabilidad**: 1432 clusters no son interpretables ❌
+5. **Datos en Alta Dimensionalidad**: 4+ dimensiones sin reducción ❌
+
+## 💡 Conclusiones y Recomendaciones
+
+### Para Este Dataset Específico:
+
+#### ❌ DBSCAN NO es Recomendado
+1. **Silhouette Score catastrófico (-0.70)**: Indica que el clustering no captura la estructura real de los datos.
+2. **Fragmentación extrema**: 1432 clusters no tienen valor práctico para mantenimiento predictivo.
+3. **Sobreajuste severo**: Los parámetros óptimos en muestra pequeña no generalizan al dataset completo.
+4. **Peor en todas las métricas clave** excepto Davies-Bouldin (que es inconsistente con las demás).
+
+#### ✅ Usar K-Means en su Lugar
+- **2/3 métricas superiores**
+- **Mucho más rápido** (3x)
+- **Más interpretable** (2 clusters significativos)
+- **Menor consumo de recursos**
+
+### Por Qué DBSCAN Falló Aquí:
+
+1. **Estructura de Datos**: Los datos de acelerómetro tienen densidad relativamente uniforme, no la variabilidad que DBSCAN necesita.
+
+2. **Escalabilidad**: Con 518,400 puntos, la complejidad O(n²) de DBSCAN se hace evidente.
+
+3. **Parámetros Hipersensibles**: Un `eps` muy pequeño (0.0644) creó fragmentación; uno más grande habría fusionado todo en un cluster gigante.
+
+4. **Muestreo No Representativo**: La muestra de 10,000 puntos usada para optimización no capturó la verdadera estructura del dataset completo.
+
+### Recomendaciones:
+
+1. **Para Clustering**: Usar **K-Means** exclusivamente en este dataset.
+
+2. **Para Detección de Anomalías**: Usar **Isolation Forest** o **CBLOF**, no DBSCAN.
+
+3. **Si se Insiste en DBSCAN**:
+   - Aumentar muestra de optimización a 50,000+ puntos
+   - Expandir rango de búsqueda de `eps` (0.5 - 2.0)
+   - Reducir `min_samples` a 2-3
+   - Aplicar reducción de dimensionalidad más agresiva (PCA a 2-3 componentes)
+
+4. **Para Otros Datasets**: DBSCAN puede funcionar bien si:
+   - Hay clara variabilidad de densidad
+   - Los clusters tienen formas no-esféricas
+   - El dataset es < 100,000 puntos
+   - Se puede invertir tiempo en tuning manual de parámetros
 
 ## 📚 Referencias
 
