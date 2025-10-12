@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 import matplotlib.image as mpimg
 from matplotlib.gridspec import GridSpec
 import os
@@ -14,7 +14,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Función para obtener métricas de forma segura
 def obtener_metrica_segura(df: pd.DataFrame, columna: str, default: float = -1.0) -> float:
     """
     Obtiene una métrica de forma segura, manejando NaN y None.
@@ -85,18 +84,15 @@ def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
 def crear_comparacion_imagenes_lado_a_lado() -> None:
     print("\n📊 Generando comparación visual de gráficas...")
     
-    # Comparación de distribución de scores
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
     
-    # CBLOF scores
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['CBLOF']['grafica_scores'])
     ax1.imshow(img1)
     ax1.set_title('CBLOF - Distribución de Scores de Anomalía', fontsize=14, fontweight='bold', pad=10)
     ax1.axis('off')
     
-    # Isolation Forest scores
     ax2 = fig.add_subplot(gs[0, 1])
     img2 = mpimg.imread(RUTAS['Isolation Forest']['grafica_scores'])
     ax2.imshow(img2)
@@ -112,18 +108,15 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     plt.close("all")
     print(f"✅ Comparación de scores guardada: {ruta_comparacion_scores.name}")
     
-    # Comparación 3D de anomalías
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
     
-    # CBLOF 3D
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['CBLOF']['grafica_3d'])
     ax1.imshow(img1)
     ax1.set_title('CBLOF - Detección de Anomalías 3D', fontsize=14, fontweight='bold', pad=10)
     ax1.axis('off')
     
-    # Isolation Forest 3D
     ax2 = fig.add_subplot(gs[0, 1])
     img2 = mpimg.imread(RUTAS['Isolation Forest']['grafica_3d'])
     ax2.imshow(img2)
@@ -185,7 +178,6 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
                               metricas_iforest: pd.DataFrame) -> None:
     print("\n📈 Generando gráficos comparativos de métricas...")
     
-    # Gráfico de barras comparativo
     metricas_nombres = ['Porcentaje de\nAnomalías (%)', 'Separación\nde Scores\n(P95-P50)', 'Score\nPromedio']
     
     cblof_values = [
@@ -218,7 +210,6 @@ def generar_graficos_metricas(metricas_cblof: pd.DataFrame,
     ax.legend(fontsize=12, loc='upper right')
     ax.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
@@ -257,7 +248,6 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
     ax.set_title('Comparación de Porcentaje de Anomalías Detectadas', fontsize=15, fontweight='bold', pad=15)
     ax.grid(axis='x', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores en las barras
     for i, (bar, valor) in enumerate(zip(bars, porcentajes)):
         ax.text(valor + 0.3, i, f'{valor:.2f}%', va='center', fontweight='bold', fontsize=12)
     
@@ -281,7 +271,6 @@ def crear_graficos_individuales(metricas_cblof: pd.DataFrame,
                 fontsize=15, fontweight='bold', pad=15)
     ax.grid(axis='x', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores en las barras
     for i, (bar, valor) in enumerate(zip(bars, separaciones)):
         ax.text(valor + 0.05, i, f'{valor:.4f}', va='center', fontweight='bold', fontsize=12)
     
@@ -303,10 +292,8 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
     memoria_cblof = obtener_metrica_segura(metricas_cblof, 'memoria_max_mb', 0)
     memoria_iforest = obtener_metrica_segura(metricas_iforest, 'memoria_max_mb', 0)
     
-    # Crear gráfico con 2 subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
     
-    # Gráfico de tiempo de ejecución
     algoritmos = ['CBLOF', 'Isolation Forest']
     tiempos = [tiempo_cblof, tiempo_iforest]
     colores = ['mediumseagreen', 'mediumpurple']
@@ -316,7 +303,6 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
     ax1.set_title('Comparación de Tiempo de Ejecución', fontsize=14, fontweight='bold', pad=15)
     ax1.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     for bar, tiempo in zip(bars1, tiempos):
         height = bar.get_height()
         if height > 0:
@@ -324,14 +310,12 @@ def crear_grafico_rendimiento(metricas_cblof: pd.DataFrame, metricas_iforest: pd
                     f'{tiempo:.2f}s',
                     ha='center', va='bottom', fontsize=11, fontweight='bold')
     
-    # Gráfico de uso de memoria
     memorias = [memoria_cblof, memoria_iforest]
     bars2 = ax2.bar(algoritmos, memorias, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
     ax2.set_ylabel('Memoria (MB)', fontsize=12, fontweight='bold')
     ax2.set_title('Comparación de Uso de Memoria', fontsize=14, fontweight='bold', pad=15)
     ax2.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     for bar, memoria in zip(bars2, memorias):
         height = bar.get_height()
         if height > 0:
@@ -357,7 +341,7 @@ def analizar_ganador(metricas_cblof: pd.DataFrame, metricas_iforest: pd.DataFram
     
     if sep_cblof > sep_iforest:
         analisis['mejor_separacion'] = 'CBLOF'
-        peso_separacion = 2  # Doble peso
+        peso_separacion = 2
     elif sep_iforest > sep_cblof:
         analisis['mejor_separacion'] = 'Isolation Forest'
         peso_separacion = 2
@@ -421,7 +405,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write(" " * 35 + "CBLOF vs Isolation Forest\n")
         f.write("=" * 100 + "\n\n")
         
-        # Tabla comparativa
         f.write("1. TABLA COMPARATIVA DE MÉTRICAS\n")
         f.write("-" * 100 + "\n")
         f.write(tabla_comparativa.to_string(index=False))
@@ -548,7 +531,7 @@ def validar_scores_normalizados() -> None:
                     min_score = np.min(scores)
                     max_score = np.max(scores)
                     
-                    if min_score < -0.01 or max_score > 1.01:  # Pequeña tolerancia por redondeo
+                    if min_score < -0.01 or max_score > 1.01:
                         print(f"⚠️  ADVERTENCIA: Scores de {algoritmo} NO están completamente normalizados")
                         print(f"   Rango: [{min_score:.4f}, {max_score:.4f}]")
                     else:
@@ -586,7 +569,6 @@ def main():
     
     crear_grafico_rendimiento(metricas_cblof, metricas_iforest)
     
-    # Validar que los scores estén normalizados
     print("\n🔍 Validando normalización de scores...")
     validar_scores_normalizados()
     
@@ -605,4 +587,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

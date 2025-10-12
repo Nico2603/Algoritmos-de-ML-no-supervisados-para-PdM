@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 import matplotlib.image as mpimg
 from matplotlib.gridspec import GridSpec
 import os
@@ -14,7 +14,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Función para obtener métricas de forma segura
 def obtener_metrica_segura(df: pd.DataFrame, columna: str, default: float = -1.0) -> float:
     """
     Obtiene una métrica de forma segura, manejando NaN y None.
@@ -83,18 +82,15 @@ def cargar_metricas() -> Tuple[pd.DataFrame, pd.DataFrame]:
 def crear_comparacion_imagenes_lado_a_lado() -> None:
     print("\n📊 Generando comparación visual de gráficas...")
     
-    # Comparación 2D
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
     
-    # DBSCAN 2D
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['DBSCAN']['grafica_2d'])
     ax1.imshow(img1)
     ax1.set_title('DBSCAN - Clustering 2D con PCA', fontsize=14, fontweight='bold', pad=10)
     ax1.axis('off')
     
-    # K-Means 2D
     ax2 = fig.add_subplot(gs[0, 1])
     img2 = mpimg.imread(RUTAS['K-Means']['grafica_2d'])
     ax2.imshow(img2)
@@ -113,14 +109,12 @@ def crear_comparacion_imagenes_lado_a_lado() -> None:
     fig = plt.figure(figsize=(18, 8))
     gs = GridSpec(1, 2, figure=fig)
     
-    # DBSCAN 3D
     ax1 = fig.add_subplot(gs[0, 0])
     img1 = mpimg.imread(RUTAS['DBSCAN']['grafica_3d'])
     ax1.imshow(img1)
     ax1.set_title('DBSCAN - Clustering 3D con PCA', fontsize=14, fontweight='bold', pad=10)
     ax1.axis('off')
     
-    # K-Means 3D
     ax2 = fig.add_subplot(gs[0, 1])
     img2 = mpimg.imread(RUTAS['K-Means']['grafica_3d'])
     ax2.imshow(img2)
@@ -191,7 +185,6 @@ def generar_graficos_metricas(metricas_dbscan: pd.DataFrame,
                               metricas_kmeans: pd.DataFrame) -> None:
     print("\n📈 Generando gráficos comparativos de métricas...")
     
-    # Gráfico de barras comparativo
     metricas_nombres = ['Silhouette\nScore', 'Calinski-\nHarabasz\n(x1000)', 'Davies-\nBouldin\n(Inverso)']
     
     sil_dbscan = metricas_dbscan['silhouette_score'].values[0] if not pd.isna(metricas_dbscan['silhouette_score'].values[0]) else 0
@@ -224,7 +217,6 @@ def generar_graficos_metricas(metricas_dbscan: pd.DataFrame,
     ax.legend(fontsize=12, loc='upper right')
     ax.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
@@ -327,10 +319,8 @@ def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd
     memoria_dbscan = obtener_metrica_segura(metricas_dbscan, 'memoria_max_mb', 0)
     memoria_kmeans = obtener_metrica_segura(metricas_kmeans, 'memoria_max_mb', 0)
     
-    # Crear gráfico con 2 subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
     
-    # Gráfico de tiempo de ejecución
     algoritmos = ['DBSCAN', 'K-Means']
     tiempos = [tiempo_dbscan, tiempo_kmeans]
     colores = ['steelblue', 'coral']
@@ -340,7 +330,6 @@ def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd
     ax1.set_title('Comparación de Tiempo de Ejecución', fontsize=14, fontweight='bold', pad=15)
     ax1.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     for bar, tiempo in zip(bars1, tiempos):
         height = bar.get_height()
         if height > 0:
@@ -348,14 +337,12 @@ def crear_grafico_rendimiento(metricas_dbscan: pd.DataFrame, metricas_kmeans: pd
                     f'{tiempo:.2f}s',
                     ha='center', va='bottom', fontsize=11, fontweight='bold')
     
-    # Gráfico de uso de memoria
     memorias = [memoria_dbscan, memoria_kmeans]
     bars2 = ax2.bar(algoritmos, memorias, color=colores, alpha=0.8, edgecolor='black', linewidth=1.5)
     ax2.set_ylabel('Memoria (MB)', fontsize=12, fontweight='bold')
     ax2.set_title('Comparación de Uso de Memoria', fontsize=14, fontweight='bold', pad=15)
     ax2.grid(axis='y', alpha=0.4, linestyle='--', linewidth=0.8)
     
-    # Añadir valores sobre las barras
     for bar, memoria in zip(bars2, memorias):
         height = bar.get_height()
         if height > 0:
@@ -443,7 +430,6 @@ def guardar_reporte_completo(tabla_comparativa: pd.DataFrame, analisis: Dict[str
         f.write(" " * 40 + "DBSCAN vs K-Means\n")
         f.write("=" * 100 + "\n\n")
         
-        # Tabla comparativa
         f.write("1. TABLA COMPARATIVA DE MÉTRICAS\n")
         f.write("-" * 100 + "\n")
         f.write(tabla_comparativa.to_string(index=False))
@@ -590,4 +576,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

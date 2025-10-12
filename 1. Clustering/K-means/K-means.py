@@ -3,9 +3,9 @@ import pandas as pd
 import os
 import sys
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -21,18 +21,15 @@ import time
 import tracemalloc
 import random
 
-# Configurar UTF-8 para salida estándar
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Importar configuración centralizada
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 warnings.filterwarnings('ignore')
 
-# Usar constantes del config centralizado
 RANDOM_STATE = config.RANDOM_STATE
 K_MIN = 2
 K_MAX = 6
@@ -60,14 +57,12 @@ class KMeansAnalyzer:
         self._crear_directorios()
         self._configurar_logging()
         
-        # Atributos del modelo
         self.datos = None
         self.X = None
         self.X_escalado = None
         self.escalador = None
         self.kmeans_final = None
         
-        # Tracking de rendimiento
         self.tiempo_inicio = None
         self.tiempo_total = None
         self.memoria_max = None
@@ -167,7 +162,6 @@ class KMeansAnalyzer:
             stats = self.datos[CARACTERISTICAS_BASE].describe()
             logging.info(f"\n{stats}")
             
-            # Validar datos de entrada
             config.validar_datos_entrada(self.datos, CARACTERISTICAS_BASE)
             
             self._crear_caracteristicas()
@@ -196,7 +190,6 @@ class KMeansAnalyzer:
         if len(self.X_escalado) <= max_muestras:
             return self.X_escalado, np.arange(len(self.X_escalado))
         
-        # Aplicar seeds consistentemente
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         indices_seleccionados = np.random.choice(len(self.X_escalado), max_muestras, replace=False)
@@ -211,7 +204,6 @@ class KMeansAnalyzer:
         if len(X) <= max_muestras:
             return X, etiquetas if etiquetas is not None else np.arange(len(X))
         
-        # Aplicar seeds consistentemente
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
@@ -289,7 +281,6 @@ class KMeansAnalyzer:
     def crear_graficos_evaluacion(self, metricas: Dict[str, List[float]]) -> None:
         K_range = range(K_MIN, K_MAX)
         
-        # Configuraciones de gráficos
         configuraciones = [
             (metricas['inercia'], 'Método del Codo para determinar el número óptimo de clusters',
              'Inercia', 'elbow_method.png'),
@@ -305,11 +296,8 @@ class KMeansAnalyzer:
             self._crear_grafico_metrica(K_range, valores, titulo, ylabel, nombre_archivo)
     
     def entrenar_modelo_final(self, k_optimo: int, resultados: List[Tuple]) -> None:
-        """Entrenar el modelo final con K óptimo"""
-        # Obtener resultados para K óptimo
         resultado_optimo = next(res for res in resultados if res[0] == k_optimo)
         
-        # Entrenar modelo final
         self.kmeans_final = KMeans(n_clusters=k_optimo, random_state=RANDOM_STATE, n_init='auto')
         self.kmeans_final.fit(self.X_escalado)
         
@@ -337,10 +325,8 @@ class KMeansAnalyzer:
             self.X_escalado - self.cluster_centers[self.labels], axis=1
         )
         
-        # Normalizar scores al rango [0, 1] usando función centralizada
         distancias_normalizadas = config.normalizar_scores_min_max(distancias)
         
-        # Detectar outliers binarios usando percentil 95 (top 5% como anomalías)
         threshold = np.percentile(distancias_normalizadas, 95)
         outliers_binarios = (distancias_normalizadas > threshold).astype(int)
         
@@ -375,7 +361,6 @@ class KMeansAnalyzer:
         
         ruta_metricas_csv = self.directorio_metricas / 'metrics.csv'
         
-        # Calcular porcentaje de outliers detectados
         pct_outliers = (self.datos['is_outlier'].sum() / len(self.datos)) * 100
         
         metricas_df = pd.DataFrame([{
@@ -434,7 +419,6 @@ class KMeansAnalyzer:
         scatter = plt.scatter(X_vis[:, 0], X_vis[:, 1], c=labels_vis, 
                             cmap=CMAP_CLUSTERING, s=SCATTER_SIZE, alpha=0.7)
         
-        # Título mejorado con información clave
         plt.title(f'Clustering K-Means (2D con PCA)\n'
                  f'Clusters: {n_clusters} | Muestras: {len(X_vis):,}',
                  fontsize=14, pad=15)
@@ -443,7 +427,6 @@ class KMeansAnalyzer:
         plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
         plt.legend(*scatter.legend_elements(), title="Clusters", loc='best')
         
-        # Grid consistente
         plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
         
         ruta_clusters_2d = self.directorio_graficas / 'clusters_2d_pca.png'
@@ -461,7 +444,6 @@ class KMeansAnalyzer:
         plt.ylabel('Componente Principal 2')
         plt.colorbar(scatter, label='Puntuación de Anomalía [0-1]')
         
-        # Grid consistente
         plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
         
         ruta_anomalias_2d = self.directorio_graficas / 'anomalies_pca.png'
@@ -481,7 +463,6 @@ class KMeansAnalyzer:
         scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], X_vis[:, 2], 
                            c=labels_vis, cmap=CMAP_CLUSTERING, s=SCATTER_SIZE, alpha=0.7)
         
-        # Título mejorado con información clave
         ax.set_title(f'Clustering K-Means (3D con PCA)\n'
                     f'Clusters: {n_clusters} | Muestras: {len(X_vis):,}',
                     fontsize=14, pad=15)
@@ -490,7 +471,6 @@ class KMeansAnalyzer:
         ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
         ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
         
-        # Corrección de proporciones
         x_range = np.ptp(X_vis[:, 0])
         y_range = np.ptp(X_vis[:, 1])
         z_range = np.ptp(X_vis[:, 2])
@@ -506,7 +486,6 @@ class KMeansAnalyzer:
         
         ax.set_box_aspect([1,1,1])
         
-        # Ángulo de vista optimizado
         ax.view_init(elev=config.VIEW_ELEV, azim=config.VIEW_AZIM)
         
         legend = ax.legend(*scatter.legend_elements(), title="Clusters", loc='upper left', bbox_to_anchor=(0.02, 0.98))
@@ -521,12 +500,10 @@ class KMeansAnalyzer:
     def ejecutar_analisis_completo(self) -> None:
         logging.info("Iniciando proceso de clustering con K-Means...")
         
-        # Iniciar tracking de tiempo y memoria
         self.tiempo_inicio = time.time()
         tracemalloc.start()
         
         try:
-            # Aplicar seeds para reproducibilidad
             config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
             
             ruta_datos = self.directorio_script / 'data.csv'
@@ -541,10 +518,9 @@ class KMeansAnalyzer:
             
             self.calcular_puntuaciones_anomalia()
             
-            # Calcular métricas de rendimiento
             self.tiempo_total = time.time() - self.tiempo_inicio
             memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
-            self.memoria_max = memoria_pico / 1024**2  # Convertir a MB
+            self.memoria_max = memoria_pico / 1024**2
             tracemalloc.stop()
             
             logging.info(f"Tiempo total de ejecucion: {self.tiempo_total:.2f} segundos")

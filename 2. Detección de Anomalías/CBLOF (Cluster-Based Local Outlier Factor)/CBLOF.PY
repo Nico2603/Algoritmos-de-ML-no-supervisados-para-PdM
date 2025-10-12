@@ -3,9 +3,9 @@ import pandas as pd
 import os
 import sys
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 from pathlib import Path
 from pyod.models.cblof import CBLOF
 from sklearn.preprocessing import StandardScaler
@@ -29,11 +29,9 @@ if sys.platform == 'win32':
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
-# Suprimir warnings no críticos
 warnings.filterwarnings('ignore', category=FutureWarning)
 warnings.filterwarnings('ignore', category=UserWarning)
 
-# Constantes del proyecto
 ARCHIVO_DATOS = 'data.csv'
 ARCHIVO_LOG = 'output.log'
 ARCHIVO_METRICAS = 'metrics.txt'
@@ -41,7 +39,6 @@ ARCHIVO_ANOMALIAS = 'anomalies.csv'
 ARCHIVO_MODELO_PKL = 'cblof_model.pkl'
 ARCHIVO_MODELO_H5 = 'cblof_model.h5'
 
-# Usar constantes del config centralizado
 USECOLS = config.USECOLS
 CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
 CARACTERISTICA_MAGNITUD = config.CARACTERISTICA_MAGNITUD
@@ -58,15 +55,13 @@ SCATTER_SIZE_ANOMALIA = config.SCATTER_SIZE_ANOMALIA
 FIGSIZE_2D = config.FIGSIZE_2D
 FIGSIZE_3D = config.FIGSIZE_3D
 
-# Grid de parámetros para búsqueda (optimizado para velocidad)
 PARAM_GRID = {
-    'n_clusters': [5, 8],      # Reducido para velocidad
-    'alpha': [0.8],            # Solo un valor para simplicidad
-    'beta': [5],               # Solo un valor para simplicidad
-    'use_weights': [True]      # Solo True para simplicidad
+    'n_clusters': [5, 8],
+    'alpha': [0.8],
+    'beta': [5],
+    'use_weights': [True]
 }
 
-# Optimización de muestreo - usar valores del config
 MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION
 MAX_MUESTRAS_VISUALIZATION = config.MAX_MUESTRAS_VISUALIZATION
 
@@ -81,17 +76,14 @@ def configurar_logging(directorio_metricas: Path) -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
-    # Limpiar handlers existentes
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
     
-    # File handler
     ruta_archivo_log = directorio_metricas / ARCHIVO_LOG
     file_handler = logging.FileHandler(ruta_archivo_log, mode=\'w\', encoding=\'utf-8\')
     file_handler.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(file_handler)
     
-    # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(console_handler)
@@ -135,7 +127,6 @@ def cargar_y_validar_datos(ruta_datos: Path) -> pd.DataFrame:
         raise FileNotFoundError(f"El archivo de datos no existe: {ruta_datos}")
     
     try:
-        # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
         try:
             datos = pd.read_csv(
                 ruta_datos, 
@@ -165,21 +156,16 @@ def cargar_y_validar_datos(ruta_datos: Path) -> pd.DataFrame:
             )
             logging.info("Datos cargados correctamente con encoding: latin-1")
         
-        # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
         datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
         
-        # Ordenar por fecha (recomendable)
         datos.sort_values('fecha', inplace=True)
         
-        # Mostrar muestra de los primeros datos
         logging.info(f"Muestra de los datos (primeras 3 filas):")
         logging.info(f"{datos.head(3).to_string()}")
         
-        # Verificar que hay datos suficientes
         if len(datos) < 100:
             logging.warning(f"Advertencia: Pocos datos disponibles: {len(datos)} registros")
         
-        # Verificar que las columnas de aceleración contienen datos numéricos
         for col in CARACTERISTICAS_BASE:
             muestra_no_nula = datos[col].dropna().head(5)
             logging.info(f"Muestra de valores en {col}: {list(muestra_no_nula)}")
@@ -201,28 +187,23 @@ def preprocesar_datos(datos: pd.DataFrame) -> Tuple[np.ndarray, StandardScaler, 
     Returns:
         Tuple con los datos escalados, el escalador ajustado y el DataFrame limpio
     """
-    # Mostrar información inicial de los datos
     logging.info(f"Datos cargados: {len(datos)} filas, {len(datos.columns)} columnas")
     logging.info(f"Columnas disponibles: {list(datos.columns)}")
     
-    # Manejo de valores faltantes
     datos_limpios = datos.dropna()
     filas_eliminadas = len(datos) - len(datos_limpios)
     
     if filas_eliminadas > 0:
         logging.info(f"Valores faltantes eliminados: {filas_eliminadas} filas")
     
-    # Verificar tipos de datos para las columnas de aceleración
     for col in CARACTERISTICAS_BASE:
         if datos_limpios[col].dtype == 'object':
             logging.info(f"Convirtiendo columna {col} de texto a numérico")
             datos_limpios[col] = pd.to_numeric(datos_limpios[col], errors='coerce')
     
-    # Eliminar filas con valores no numéricos después de la conversión
     datos_limpios = datos_limpios.dropna(subset=CARACTERISTICAS_BASE)
     
-    # Ingeniería de características
-    datos_limpios = datos_limpios.copy()  # Evitar warning de SettingWithCopyWarning
+    datos_limpios = datos_limpios.copy()
     datos_limpios[CARACTERISTICA_MAGNITUD] = np.sqrt(
         datos_limpios['acceleration_x']**2 +
         datos_limpios['acceleration_y']**2 +
@@ -230,21 +211,17 @@ def preprocesar_datos(datos: pd.DataFrame) -> Tuple[np.ndarray, StandardScaler, 
     )
     logging.info(f"Característica '{CARACTERISTICA_MAGNITUD}' añadida.")
     
-    # Seleccionar características
     caracteristicas = CARACTERISTICAS_BASE + [CARACTERISTICA_MAGNITUD]
     X = datos_limpios[caracteristicas].values
     
-    # Mostrar estadísticas básicas
     logging.info(f"Estadísticas de los datos:")
     for i, col in enumerate(caracteristicas):
         logging.info(f"  {col}: min={X[:, i].min():.4f}, max={X[:, i].max():.4f}, media={X[:, i].mean():.4f}")
     
-    # Validar que no hay valores infinitos o NaN
     if np.any(np.isinf(X)) or np.any(np.isnan(X)):
         logging.warning("Se encontraron valores infinitos o NaN después del preprocesamiento")
         X = np.nan_to_num(X, nan=0.0, posinf=np.finfo(np.float64).max, neginf=np.finfo(np.float64).min)
     
-    # Escalar los datos
     escalador = StandardScaler()
     X_escalado = escalador.fit_transform(X)
     logging.info("Datos escalados correctamente.")
@@ -285,8 +262,7 @@ def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = MAX_MUE
     if len(X) <= max_muestras:
         return X, np.arange(len(X))
     
-    # Muestreo aleatorio estratificado
-    np.random.seed(RANDOM_STATE)  # Para reproducibilidad
+    np.random.seed(RANDOM_STATE)
     indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
     indices_seleccionados = np.sort(indices_seleccionados)
     
@@ -346,13 +322,10 @@ def evaluar_parametros_cblof(params: Dict[str, Any], X_escalado: np.ndarray) -> 
         clf.fit(X_escalado)
         anomaly_scores = clf.decision_scores_
         
-        # CORRIGIDO: Usar criterio de separación de scores en lugar de métricas de clustering incorrectas
-        # Calcular separación entre anomalías y normales
         p95_score = np.percentile(anomaly_scores, 95)
         p50_score = np.percentile(anomaly_scores, 50)
         separacion_scores = p95_score - p50_score
         
-        # Métricas adicionales
         std_scores = np.std(anomaly_scores)
         mean_scores = np.mean(anomaly_scores)
         
@@ -383,19 +356,16 @@ def buscar_mejores_parametros(X_escalado: np.ndarray) -> Tuple[CBLOF, Dict[str, 
     """
     logging.info("Iniciando búsqueda de mejores parámetros...")
     
-    # Paralelizar la búsqueda
     resultados = Parallel(n_jobs=N_JOBS)(
         delayed(evaluar_parametros_cblof)(params, X_escalado) 
         for params in ParameterGrid(PARAM_GRID)
     )
     
-    # Filtrar resultados válidos
     resultados_validos = [res for res in resultados if res is not None]
     
     if not resultados_validos:
         raise ValueError("No se encontraron parámetros que produzcan clusters válidos")
     
-    # Seleccionar el mejor modelo por separación de scores (mayor es mejor)
     mejor_resultado = max(resultados_validos, key=lambda x: x[0])
     mejor_separacion, mejor_std, mejor_mean, mejores_parametros, mejor_modelo = mejor_resultado
     
@@ -424,16 +394,12 @@ def calcular_metricas_adicionales(modelo: CBLOF, X_escalado: np.ndarray) -> Dict
     Returns:
         Diccionario con las métricas calculadas
     """
-    # CORRIGIDO: En PyOD, labels_ es 0/1 (normal/outlier), no cluster IDs
-    binary_labels = modelo.labels_  # 0: normal, 1: outlier
+    binary_labels = modelo.labels_
     anomaly_scores = modelo.decision_scores_
     
-    # Calcular métricas de anomalías correctamente
     n_anomalias = np.sum(binary_labels)
     porcentaje_anomalias = (n_anomalias / len(binary_labels)) * 100
     
-    # Para CBLOF, no podemos calcular métricas de clustering tradicionales
-    # porque no tenemos acceso directo a los cluster IDs del clustering interno
     logging.info(f"Anomalías detectadas: {n_anomalias} ({porcentaje_anomalias:.2f}%)")
     logging.info(f"Rango de scores de anomalía: {np.min(anomaly_scores):.4f} - {np.max(anomaly_scores):.4f}")
     
@@ -492,7 +458,6 @@ def guardar_modelo(modelo: CBLOF, directorio_modelos: Path) -> None:
         modelo: Modelo CBLOF entrenado
         directorio_modelos: Directorio donde guardar los modelos
     """
-    # Guardar como pickle
     ruta_modelo_pkl = directorio_modelos / ARCHIVO_MODELO_PKL
     try:
         joblib.dump(modelo, ruta_modelo_pkl)
@@ -500,7 +465,6 @@ def guardar_modelo(modelo: CBLOF, directorio_modelos: Path) -> None:
     except Exception as e:
         logging.error(f"Error guardando modelo pickle: {e}")
     
-    # Guardar como HDF5
     ruta_modelo_h5 = directorio_modelos / ARCHIVO_MODELO_H5
     try:
         with h5py.File(ruta_modelo_h5, 'w') as hf:
@@ -529,10 +493,8 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
     """
     anomaly_scores = modelo.decision_scores_
     
-    # Configurar matplotlib para evitar problemas con display
-    plt.ioff()  # Desactivar modo interactivo
+    plt.ioff()
     
-    # 1. Distribución de puntuaciones de anomalía
     try:
         plt.figure(figsize=(10, 6))
         plt.hist(anomaly_scores, bins=50, alpha=0.7, edgecolor='black')
@@ -548,11 +510,9 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
     except Exception as e:
         logging.error(f"Error generando gráfico de puntuaciones: {e}")
     
-    # 2. Visualización 3D de clusters y anomalías - OPTIMIZADA
     try:
         labels_visualizacion = np.where(modelo.labels_ == 0, 0, 1)
         
-        # Aplicar muestreo para visualización si es necesario
         X_vis, labels_vis = reducir_muestra_para_visualizacion(X_pca, labels_visualizacion)
         
         X_anomalias = X_vis[labels_vis == 1]
@@ -574,15 +534,12 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
         ax.set_zlabel('Componente Principal 3', fontsize=12)
         ax.set_title('Detección de Anomalías con CBLOF en 3D', fontsize=14)
         
-        # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
         if len(X_vis) > 0:
-            # Calcular rangos de datos
-            x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+            x_range = np.ptp(X_vis[:, 0])
             y_range = np.ptp(X_vis[:, 1])
             z_range = np.ptp(X_vis[:, 2])
             max_range = max(x_range, y_range, z_range)
             
-            # Centrar y escalar los ejes
             x_center = np.mean(X_vis[:, 0])
             y_center = np.mean(X_vis[:, 1])
             z_center = np.mean(X_vis[:, 2])
@@ -591,7 +548,6 @@ def generar_visualizaciones(modelo: CBLOF, X_pca: np.ndarray, datos: pd.DataFram
             ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
             ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
             
-            # Configurar aspecto igual
             ax.set_box_aspect([1,1,1])
         
         ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
@@ -615,21 +571,17 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
         directorio_metricas: Directorio donde guardar el archivo
     """
     try:
-        # Crear DataFrame con todos los datos y scores estandarizados
         datos_salida = datos.copy()
         datos_salida['anomaly_score'] = modelo.decision_scores_
-        datos_salida['is_outlier'] = modelo.labels_  # En PyOD: 0=normal, 1=outlier
+        datos_salida['is_outlier'] = modelo.labels_
         
-        # Guardar salida completa con fecha, XYZ, is_outlier y anomaly_score
         ruta_salida_completa = directorio_metricas / 'anomaly_scores.csv'
         datos_salida[['fecha'] + CARACTERISTICAS_BASE + ['is_outlier', 'anomaly_score']].to_csv(ruta_salida_completa, index=False)
         logging.info(f"Salida completa guardada en {ruta_salida_completa}")
         
-        # Guardar solo anomalías para retrocompatibilidad
         anomalias = datos_salida[modelo.labels_ == 1].copy()
         
         if not anomalias.empty:
-            # Ordenar por fecha si está disponible, sino por score
             if 'fecha' in anomalias.columns:
                 anomalias = anomalias.sort_values(['fecha', 'anomaly_score'], ascending=[True, False])
             else:
@@ -646,39 +598,30 @@ def guardar_anomalias_detectadas(modelo: CBLOF, datos: pd.DataFrame,
 
 def main() -> None:
     """Función principal que ejecuta todo el pipeline de detección de anomalías."""
-    # Iniciar tracking de tiempo y memoria
     tiempo_inicio = time.time()
     tracemalloc.start()
     
     try:
-        # 1. Configuración inicial
         directorio_script = Path(__file__).parent.absolute()
         directorio_modelos, directorio_graficas, directorio_metricas = crear_directorios(directorio_script)
         configurar_logging(directorio_metricas)
         
         logging.info("=== INICIANDO PROCESO DE DETECCIÓN DE ANOMALÍAS CON CBLOF ===")
         
-        # Aplicar seeds para reproducibilidad
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        # 2. Cargar y validar datos
         ruta_datos = directorio_script / ARCHIVO_DATOS
         datos = cargar_y_validar_datos(ruta_datos)
         
-        # 3. Preprocesamiento
         X_escalado, escalador, datos_limpios = preprocesar_datos(datos)
         logging.info(f"Datos preprocesados: {X_escalado.shape[0]} muestras, {X_escalado.shape[1]} características")
         
-        # 4. Reducción de dimensionalidad
         X_pca, pca = aplicar_pca(X_escalado)
         
-        # 5. Reducir muestra para optimización si es muy grande
         X_para_optimizacion, indices_muestra = reducir_muestra_para_optimizacion(X_escalado)
         
-        # 6. Búsqueda de mejores parámetros usando muestra reducida
         mejor_modelo_muestra, metricas = buscar_mejores_parametros(X_para_optimizacion)
         
-        # 7. Aplicar mejores parámetros al dataset completo
         mejores_parametros = {
             'n_clusters': mejor_modelo_muestra.n_clusters,
             'alpha': mejor_modelo_muestra.alpha,
@@ -697,16 +640,12 @@ def main() -> None:
         )
         mejor_modelo.fit(X_escalado)
         
-        # 8. Evaluación adicional
         metricas_adicionales = calcular_metricas_adicionales(mejor_modelo, X_escalado)
         
-        # 9. Guardar resultados
-        # Los mejores parámetros ya están definidos arriba
         
         guardar_metricas(metricas, metricas_adicionales, mejores_parametros, directorio_metricas)
         guardar_modelo(mejor_modelo, directorio_modelos)
         
-        # Guardar escalador y PCA para inferencia futura
         ruta_escalador = directorio_modelos / 'scaler.pkl'
         joblib.dump(escalador, ruta_escalador)
         
@@ -716,22 +655,18 @@ def main() -> None:
         logging.info(f"Escalador guardado en {ruta_escalador}")
         logging.info(f"PCA guardado en {ruta_pca}")
         
-        # Calcular métricas de rendimiento
         tiempo_total = time.time() - tiempo_inicio
         memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
-        memoria_max = memoria_pico / 1024**2  # Convertir a MB
+        memoria_max = memoria_pico / 1024**2
         tracemalloc.stop()
         
         logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logging.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
-        # 10. Generar visualizaciones
         generar_visualizaciones(mejor_modelo, X_pca, datos_limpios, directorio_graficas)
         
-        # 11. Guardar anomalías detectadas
         guardar_anomalias_detectadas(mejor_modelo, datos_limpios, directorio_metricas)
         
-        # 12. Guardar métricas estandarizadas CSV (incluir tiempo y memoria)
         ruta_metricas_csv = directorio_metricas / 'metrics.csv'
         guardar_metricas_csv(mejor_modelo, datos_limpios, mejores_parametros, metricas, ruta_metricas_csv,
                             tiempo_total, memoria_max)
@@ -758,15 +693,12 @@ def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros:
         metricas: Métricas del modelo
         ruta_archivo: Ruta donde guardar el CSV
     """
-    # Métricas básicas
     anomaly_scores_raw = modelo.decision_scores_
     
-    # Normalizar scores al rango [0, 1] usando función centralizada
     anomaly_scores = config.normalizar_scores_min_max(anomaly_scores_raw)
     
     etiquetas_binarias = modelo.labels_
     
-    # Recalcular separación con scores normalizados
     p95_score = np.percentile(anomaly_scores, 95)
     p50_score = np.percentile(anomaly_scores, 50)
     separacion_normalizada = p95_score - p50_score
@@ -775,7 +707,7 @@ def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros:
         'algoritmo': 'CBLOF',
         'params_json': str(mejores_parametros),
         'n_clusters': mejores_parametros.get('n_clusters', None),
-        'silhouette_score': None,  # No válido para detección binaria
+        'silhouette_score': None,
         'calinski_harabasz_score': None,
         'davies_bouldin_score': None,
         'pct_anomalias': np.mean(etiquetas_binarias) * 100,
@@ -787,7 +719,6 @@ def guardar_metricas_csv(modelo: CBLOF, datos: pd.DataFrame, mejores_parametros:
     
 
     
-    # Guardar como CSV
     df_metricas = pd.DataFrame([metricas_csv])
     df_metricas.to_csv(ruta_archivo, index=False)
 

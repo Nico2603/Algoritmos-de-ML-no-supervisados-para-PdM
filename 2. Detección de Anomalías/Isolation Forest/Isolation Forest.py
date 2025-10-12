@@ -11,9 +11,9 @@ import random
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 import joblib
 import h5py
 from sklearn.ensemble import IsolationForest
@@ -23,19 +23,15 @@ from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silho
 from sklearn.model_selection import ParameterGrid
 from joblib import Parallel, delayed
 
-# Configurar UTF-8 para salida estándar
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Importar configuración centralizada
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
-# Suprimir warnings innecesarios
 warnings.filterwarnings('ignore', category=FutureWarning)
 
-# Usar constantes del config centralizado
 USECOLS = config.USECOLS
 CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
 NOMBRE_ARCHIVO_DATOS = 'data.csv'
@@ -55,14 +51,12 @@ SCATTER_SIZE_ANOMALIA = config.SCATTER_SIZE_ANOMALIA
 FIGSIZE_2D = config.FIGSIZE_2D
 FIGSIZE_3D = config.FIGSIZE_3D
 
-# Parámetros por defecto para búsqueda de hiperparámetros (optimizado para velocidad)
 PARAMETROS_BUSQUEDA = {
-    'n_estimators': [50, 100],  # Reducido para velocidad
-    'max_samples': ['auto'],    # Solo auto para simplicidad
+    'n_estimators': [50, 100],
+    'max_samples': ['auto'],
     'contamination': [0.05, 0.1],
     'max_features': [1.0]
 }
-# Optimización de muestreo - usar valores del config
 MAX_MUESTRAS_OPTIMIZACION = config.MAX_MUESTRAS_OPTIMIZACION
 MAX_MUESTRAS_VISUALIZATION = config.MAX_MUESTRAS_VISUALIZATION
 
@@ -95,19 +89,15 @@ def configurar_logging(ruta_archivo_log: Path) -> logging.Logger:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     
-    # Limpiar handlers existentes
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
     
-    # Configurar formato
-    formatter = logging.Formatter('%(message)s')  # Formato simple sin timestamp
+    formatter = logging.Formatter('%(message)s')
     
-    # Handler para archivo
     file_handler = logging.FileHandler(ruta_archivo_log, mode='w', encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     
-    # Handler para consola
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
@@ -133,7 +123,6 @@ def cargar_datos(ruta_datos: Path) -> pd.DataFrame:
         raise FileNotFoundError(f"No se encontró el archivo de datos: {ruta_datos}")
     
     try:
-        # BLINDADO: Cargar solo las 4 columnas necesarias con tipos optimizados
         try:
             datos = pd.read_csv(
                 ruta_datos, 
@@ -164,10 +153,8 @@ def cargar_datos(ruta_datos: Path) -> pd.DataFrame:
         if datos.empty:
             raise ValueError("El archivo de datos está vacío")
         
-        # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
         datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
         
-        # Ordenar por fecha (recomendable)
         datos.sort_values('fecha', inplace=True)
         
         return datos
@@ -185,15 +172,12 @@ def preprocesar_datos(datos: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
     Returns:
         Tupla con los datos procesados y lista de características
     """
-    # Eliminar valores faltantes
     datos_limpios = datos.dropna().copy()
     
-    # Verificar que tenemos las características base
     for caracteristica in CARACTERISTICAS_BASE:
         if caracteristica not in datos_limpios.columns:
             raise ValueError(f"Característica requerida no encontrada: {caracteristica}")
     
-    # Crear característica derivada: magnitud de aceleración
     datos_limpios['magnitud_aceleracion'] = np.sqrt(
         datos_limpios['acceleration_x']**2 +
         datos_limpios['acceleration_y']**2 +
@@ -235,7 +219,6 @@ def reducir_muestra_para_optimizacion(X: np.ndarray, max_muestras: int = MAX_MUE
     if len(X) <= max_muestras:
         return X, np.arange(len(X))
     
-    # Aplicar seeds consistentemente
     config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
     
     indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
@@ -262,7 +245,6 @@ def reducir_muestra_para_visualizacion(X: np.ndarray, etiquetas: np.ndarray, max
     if len(X) <= max_muestras:
         return X, etiquetas
     
-    # Aplicar seeds consistentemente
     config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
     
     indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
@@ -304,7 +286,6 @@ def evaluar_modelo_isolation_forest(params: Dict[str, Any], X_escalado: np.ndarr
         Tupla con métricas de evaluación y modelo entrenado, o None si falla
     """
     try:
-        # Entrenar modelo
         clf = IsolationForest(
             n_estimators=params['n_estimators'],
             max_samples=params['max_samples'],
@@ -314,23 +295,17 @@ def evaluar_modelo_isolation_forest(params: Dict[str, Any], X_escalado: np.ndarr
         )
         clf.fit(X_escalado)
         
-        # Obtener predicciones
-        # CORRIGIDO: Invertir el score para que mayor valor = más anómalo
-        scores_raw = -clf.decision_function(X_escalado)  # Invertir para score consistente
+        scores_raw = -clf.decision_function(X_escalado)
         
-        # Normalizar scores al rango [0, 1] usando función centralizada
         scores = config.normalizar_scores_min_max(scores_raw)
         
         etiquetas = clf.predict(X_escalado)
-        etiquetas = np.where(etiquetas == 1, 0, 1)  # 0: normal, 1: anomalía
+        etiquetas = np.where(etiquetas == 1, 0, 1)
         
-        # CORRIGIDO: Usar separación de percentiles en lugar de media
-        # Calcular separación entre anomalías y normales
         p95_score = np.percentile(scores, 95)
         p50_score = np.percentile(scores, 50)
         separacion_scores = p95_score - p50_score
         
-        # Métricas adicionales
         n_anomalias = np.sum(etiquetas)
         porcentaje_anomalias = (n_anomalias / len(etiquetas)) * 100
         std_scores = np.std(scores)
@@ -370,19 +345,16 @@ def buscar_mejores_parametros(X_escalado: np.ndarray, logger: logging.Logger, pa
     
     logger.info("Iniciando búsqueda de mejores parámetros...")
     
-    # Evaluar parámetros en paralelo (limitado para estabilidad)
     resultados = Parallel(n_jobs=1)(
         delayed(evaluar_modelo_isolation_forest)(params, X_escalado, logger) 
         for params in ParameterGrid(param_grid)
     )
     
-    # Filtrar resultados válidos
     resultados_validos = [res for res in resultados if res is not None]
     
     if not resultados_validos:
         raise ValueError("No se encontraron parámetros que produzcan resultados válidos")
     
-    # Seleccionar el mejor resultado por separación de scores (mayor es mejor)
     mejor_resultado = max(resultados_validos, key=lambda x: x[0])
     logger.info(f"Mejores parámetros encontrados: {mejor_resultado[1]}")
     logger.info(f"Mejor separación de scores: {mejor_resultado[0]:.4f}")
@@ -436,10 +408,8 @@ def guardar_modelo(modelo: IsolationForest, scores: np.ndarray, etiquetas: np.nd
         ruta_pkl: Ruta para archivo pickle
         ruta_h5: Ruta para archivo HDF5
     """
-    # Guardar como pickle
     joblib.dump(modelo, ruta_pkl)
     
-    # Guardar como HDF5
     with h5py.File(ruta_h5, 'w') as hf:
         hf.create_dataset('decision_scores', data=scores)
         hf.create_dataset('etiquetas', data=etiquetas)
@@ -460,7 +430,6 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
         etiquetas: Etiquetas de clasificación
         directorio_graficas: Directorio donde guardar los gráficos
     """
-    # Gráfico de distribución de puntuaciones
     n_anomalias = np.sum(etiquetas)
     pct_anomalias = (n_anomalias / len(etiquetas)) * 100
     
@@ -476,8 +445,6 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     plt.savefig(ruta_puntuaciones, dpi=200, bbox_inches='tight')
     plt.close("all")
     
-    # Gráfico 3D de anomalías - OPTIMIZADO
-    # Aplicar muestreo para visualización si es necesario
     X_vis, etiquetas_vis = reducir_muestra_para_visualizacion(X_pca, etiquetas)
     
     X_anomalias = X_vis[etiquetas_vis == 1]
@@ -490,7 +457,6 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     fig = plt.figure(figsize=FIGSIZE_3D)
     ax = fig.add_subplot(111, projection='3d')
     
-    # Plotear puntos normales y anomalías con colores consistentes
     if len(X_normales) > 0:
         ax.scatter(X_normales[:, 0], X_normales[:, 1], X_normales[:, 2], 
                   c=COLOR_NORMAL, label=f'Normales ({len(X_normales)})', 
@@ -501,7 +467,6 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
                   c=COLOR_ANOMALIA, label=f'Anomalías ({len(X_anomalias)})', 
                   s=SCATTER_SIZE_ANOMALIA, alpha=ALPHA_ANOMALIA)
     
-    # Título mejorado con información clave
     ax.set_title(f'Detección de Anomalías con Isolation Forest (3D)\n'
                 f'Anomalías: {n_anomalias_vis} ({pct_anomalias_vis:.2f}%) | Muestras: {len(X_vis):,}',
                 fontsize=14, pad=15)
@@ -510,15 +475,12 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
     ax.set_ylabel('Componente Principal 2', fontsize=12)
     ax.set_zlabel('Componente Principal 3', fontsize=12)
     
-    # CORREGIR ASPECTO: Ajustar proporciones de los ejes para evitar deformación
     if len(X_vis) > 0:
-        # Calcular rangos de datos
-        x_range = np.ptp(X_vis[:, 0])  # Peak to peak (max - min)
+        x_range = np.ptp(X_vis[:, 0])
         y_range = np.ptp(X_vis[:, 1])
         z_range = np.ptp(X_vis[:, 2])
         max_range = max(x_range, y_range, z_range)
         
-        # Centrar y escalar los ejes
         x_center = np.mean(X_vis[:, 0])
         y_center = np.mean(X_vis[:, 1])
         z_center = np.mean(X_vis[:, 2])
@@ -527,10 +489,8 @@ def generar_graficos(scores: np.ndarray, X_pca: np.ndarray, etiquetas: np.ndarra
         ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
         ax.set_zlim(z_center - max_range/2, z_center + max_range/2)
         
-        # Configurar aspecto igual
         ax.set_box_aspect([1,1,1])
     
-    # Ángulo de vista optimizado
     ax.view_init(elev=config.VIEW_ELEV, azim=config.VIEW_AZIM)
     
     ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
@@ -551,23 +511,19 @@ def guardar_anomalias(datos_originales: pd.DataFrame, etiquetas: np.ndarray,
         scores: Puntuaciones de anomalía
         ruta_archivo: Ruta donde guardar el archivo
     """
-    # Crear DataFrame con todos los datos y scores estandarizados
     datos_salida = datos_originales.copy()
     datos_salida['anomaly_score'] = scores
     datos_salida['is_outlier'] = etiquetas
     
-    # Guardar salida completa con fecha, XYZ, is_outlier y anomaly_score
     ruta_salida_completa = ruta_archivo.parent / 'anomaly_scores.csv'
     datos_salida[['fecha'] + CARACTERISTICAS_BASE + ['is_outlier', 'anomaly_score']].to_csv(ruta_salida_completa, index=False)
     
-    # Guardar solo anomalías para retrocompatibilidad
     anomalias = datos_salida[etiquetas == 1].copy()
     
-    # Ordenar por fecha si está disponible, sino por score
     if 'fecha' in anomalias.columns:
         anomalias = anomalias.sort_values(['fecha', 'anomaly_score'], ascending=[True, False])
     else:
-        anomalias = anomalias.sort_values('anomaly_score', ascending=False)  # Mayor score = más anómalo
+        anomalias = anomalias.sort_values('anomaly_score', ascending=False)
     
     anomalias.to_csv(ruta_archivo, index=False)
 
@@ -589,12 +545,11 @@ def guardar_metricas_csv(datos: pd.DataFrame, etiquetas: np.ndarray, scores: np.
     """
     separacion_scores, mejores_params, _ = mejor_resultado
     
-    # Métricas básicas (100% no-supervisado)
     metricas = {
         'algoritmo': 'Isolation_Forest',
         'params_json': str(mejores_params),
-        'n_clusters': None,  # No aplica para Isolation Forest
-        'silhouette_score': None,  # No válido para detección binaria
+        'n_clusters': None,
+        'silhouette_score': None,
         'calinski_harabasz_score': None,
         'davies_bouldin_score': None,
         'pct_anomalias': np.mean(etiquetas) * 100,
@@ -604,57 +559,45 @@ def guardar_metricas_csv(datos: pd.DataFrame, etiquetas: np.ndarray, scores: np.
         'memoria_max_mb': memoria_max
     }
     
-    # Guardar como CSV
     df_metricas = pd.DataFrame([metricas])
     df_metricas.to_csv(ruta_archivo, index=False)
 
 
 def main() -> None:
     """Función principal del programa."""
-    # Iniciar tracking de tiempo y memoria
     tiempo_inicio = time.time()
     tracemalloc.start()
     
     try:
-        # Configuración inicial
         directorio_script = Path(__file__).parent
         directorios = DirectoriosProyecto(directorio_script)
         directorios.crear_directorios()
         
-        # Configurar logging
         logger = configurar_logging(directorios.directorio_metricas / ARCHIVO_LOG)
         logger.info("Iniciando proceso de detección de anomalías con Isolation Forest...")
         
-        # Aplicar seeds para reproducibilidad
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
-        # Cargar y preprocesar datos
         ruta_datos = directorio_script / NOMBRE_ARCHIVO_DATOS
         datos = cargar_datos(ruta_datos)
         logger.info(f"Datos cargados: {len(datos)} registros")
         
-        # Validar datos de entrada
         config.validar_datos_entrada(datos, CARACTERISTICAS_BASE)
         
         X, caracteristicas = preprocesar_datos(datos)
         logger.info(f"Datos preprocesados: {X.shape}")
         logger.info(f"Características utilizadas: {caracteristicas}")
         
-        # Escalar datos
         X_escalado, escalador = escalar_datos(X)
         logger.info("Datos escalados correctamente")
         
-        # Reducción de dimensionalidad
         X_pca, pca = reducir_dimensionalidad(X_escalado)
         logger.info(f"Reducción de dimensionalidad completada: {X_pca.shape}")
         
-        # Reducir muestra para optimización si es muy grande
         X_para_optimizacion, indices_muestra = reducir_muestra_para_optimizacion(X_escalado)
         
-        # Búsqueda de mejores parámetros usando muestra reducida
         mejor_resultado = buscar_mejores_parametros(X_para_optimizacion, logger)
         
-        # Aplicar el mejor modelo al dataset completo
         _, mejores_params, _ = mejor_resultado
         logger.info(f"Aplicando mejores parámetros al dataset completo...")
         
@@ -667,11 +610,8 @@ def main() -> None:
         )
         modelo_final.fit(X_escalado)
         
-        # Hacer predicciones con el modelo final en el dataset completo
-        # CORRIGIDO: Invertir el score para que mayor valor = más anómalo
-        scores_pred_raw = -modelo_final.decision_function(X_escalado)  # Invertir para score consistente
+        scores_pred_raw = -modelo_final.decision_function(X_escalado)
         
-        # Normalizar scores al rango [0, 1] usando función centralizada
         scores_pred = config.normalizar_scores_min_max(scores_pred_raw)
         
         etiquetas_pred = modelo_final.predict(X_escalado)
@@ -682,42 +622,35 @@ def main() -> None:
         
         logger.info(f"Detección completada: {n_anomalias} anomalías ({porcentaje_anomalias:.2f}%)")
         
-        # Guardar resultados
         ruta_metricas = directorios.directorio_metricas / ARCHIVO_METRICAS
         guardar_metricas(ruta_metricas, mejor_resultado, n_anomalias, porcentaje_anomalias, scores_pred)
         logger.info(f"Métricas guardadas en {ruta_metricas}")
         
-        # Guardar modelo
         ruta_modelo_pkl = directorios.directorio_modelos / EXTENSION_MODELO_PKL
         ruta_modelo_h5 = directorios.directorio_modelos / EXTENSION_MODELO_H5
         guardar_modelo(modelo_final, scores_pred, etiquetas_pred, ruta_modelo_pkl, ruta_modelo_h5)
         
-        # Guardar escalador para inferencia futura
         ruta_escalador = directorios.directorio_modelos / 'scaler.pkl'
         joblib.dump(escalador, ruta_escalador)
         
         logger.info(f"Modelo guardado en formatos pickle y HDF5")
         logger.info(f"Escalador guardado en {ruta_escalador}")
         
-        # Calcular métricas de rendimiento
         tiempo_total = time.time() - tiempo_inicio
         memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
-        memoria_max = memoria_pico / 1024**2  # Convertir a MB
+        memoria_max = memoria_pico / 1024**2
         tracemalloc.stop()
         
         logger.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
         logger.info(f"Memoria maxima utilizada: {memoria_max:.2f} MB")
         
-        # Generar gráficos
         generar_graficos(scores_pred, X_pca, etiquetas_pred, directorios.directorio_graficas)
         logger.info("Gráficos generados y guardados")
         
-        # Guardar anomalías detectadas
         ruta_anomalias = directorios.directorio_metricas / ARCHIVO_ANOMALIAS
         guardar_anomalias(datos, etiquetas_pred, scores_pred, ruta_anomalias)
         logger.info(f"Anomalías guardadas en {ruta_anomalias}")
         
-        # Guardar métricas estandarizadas CSV (incluir tiempo y memoria)
         ruta_metricas_csv = directorios.directorio_metricas / 'metrics.csv'
         guardar_metricas_csv(datos, etiquetas_pred, scores_pred, mejor_resultado, ruta_metricas_csv, 
                             tiempo_total, memoria_max)

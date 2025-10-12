@@ -3,9 +3,9 @@ import pandas as pd
 import os
 import sys
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo ANTES de importar pyplot
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.ioff()  # Desactivar modo interactivo
+plt.ioff()
 import warnings
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
@@ -25,19 +25,16 @@ import time
 import tracemalloc
 import random
 
-# Configurar UTF-8 para salida estándar
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Importar configuración centralizada
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 
 warnings.filterwarnings('ignore')
 plt.style.use('default')
 
-# Usar constantes del config centralizado
 USECOLS = config.USECOLS
 CARACTERISTICAS_BASE = config.CARACTERISTICAS_BASE
 MIN_CLUSTERS_VALIDOS = 2
@@ -121,13 +118,10 @@ class ProcesadorDatos:
             if datos.empty:
                 raise ValueError("El archivo CSV está vacío")
             
-            # BLINDADO: Recortar DataFrame a solo las 4 columnas por si el CSV trae más
             datos = datos[['fecha'] + CARACTERISTICAS_BASE].copy()
             
-            # Ordenar por fecha (recomendable)
             datos.sort_values('fecha', inplace=True)
             
-            # Mostrar información detallada sobre los datos cargados
             logging.info(f"Archivo CSV cargado exitosamente:")
             logging.info(f"  - Dimensiones: {datos.shape[0]} filas x {datos.shape[1]} columnas")
             logging.info(f"  - Columnas cargadas: {list(datos.columns)}")
@@ -135,12 +129,10 @@ class ProcesadorDatos:
             for col in datos.columns:
                 logging.info(f"    • {col}: {datos[col].dtype}")
             
-            # Mostrar estadísticas básicas de las primeras filas
             logging.info(f"  - Primeras 3 filas de datos:")
             for i, (_, fila) in enumerate(datos.head(3).iterrows()):
                 logging.info(f"    Fila {i+1}: {dict(fila)}")
             
-            # Verificar valores faltantes por columna
             valores_faltantes = datos[CARACTERISTICAS_BASE].isnull().sum()
             if valores_faltantes.any():
                 logging.info(f"  - Valores faltantes por columna:")
@@ -150,7 +142,6 @@ class ProcesadorDatos:
             else:
                 logging.info(f"  - No se encontraron valores faltantes")
             
-            # Validar datos de entrada usando función centralizada
             config.validar_datos_entrada(datos, CARACTERISTICAS_BASE)
             
             return datos
@@ -174,16 +165,13 @@ class ProcesadorDatos:
         Returns:
             Tupla con (datos_procesados, matriz_caracteristicas).
         """
-        # Validar características base
         ProcesadorDatos.validar_caracteristicas(datos, CARACTERISTICAS_BASE)
         logging.info(f"Características base validadas: {CARACTERISTICAS_BASE}")
         
-        # Mostrar columnas adicionales disponibles
         columnas_adicionales = [col for col in datos.columns if col not in CARACTERISTICAS_BASE]
         if columnas_adicionales:
             logging.info(f"Columnas adicionales encontradas: {columnas_adicionales}")
         
-        # Eliminar valores faltantes
         filas_originales = len(datos)
         datos_limpios = datos.dropna()
         filas_eliminadas = filas_originales - len(datos_limpios)
@@ -196,7 +184,6 @@ class ProcesadorDatos:
         if datos_limpios.empty:
             raise ValueError("No quedan datos después de eliminar valores faltantes")
         
-        # Añadir magnitud de aceleración
         datos_limpios = datos_limpios.copy()
         datos_limpios['magnitud_aceleracion'] = np.sqrt(
             datos_limpios['acceleration_x']**2 +
@@ -205,11 +192,9 @@ class ProcesadorDatos:
         )
         logging.info("Característica derivada añadida: 'magnitud_aceleracion'")
         
-        # Seleccionar características para clustering
         caracteristicas = CARACTERISTICAS_BASE + ['magnitud_aceleracion']
         matriz_caracteristicas = datos_limpios[caracteristicas].values
         
-        # Mostrar estadísticas de las características
         logging.info(f"Estadísticas de características para clustering:")
         for i, col in enumerate(caracteristicas):
             valores = matriz_caracteristicas[:, i]
@@ -234,7 +219,6 @@ class ProcesadorDatos:
         if len(X) <= max_muestras:
             return X, np.arange(len(X))
         
-        # Aplicar seeds consistentemente
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
@@ -250,7 +234,6 @@ class ProcesadorDatos:
         if len(X) <= max_muestras:
             return X, etiquetas
         
-        # Aplicar seeds consistentemente
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         indices_seleccionados = np.random.choice(len(X), max_muestras, replace=False)
@@ -396,7 +379,6 @@ class VisualizadorClusters:
             n_ruido = np.sum(etiquetas_vis == -1)
             
             etiquetas_unicas = set(etiquetas_vis)
-            # Usar colormap consistente
             colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
             
             plt.figure(figsize=config.FIGSIZE_2D)
@@ -411,14 +393,12 @@ class VisualizadorClusters:
                     plt.scatter(puntos[:, 0], puntos[:, 1], c=[color], marker='o', 
                               s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            # Título mejorado con información clave
             plt.title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
                      fontsize=14, pad=15)
             plt.xlabel(f'Componente Principal 1 (Varianza: {pca.explained_variance_ratio_[0]:.2%})')
             plt.ylabel(f'Componente Principal 2 (Varianza: {pca.explained_variance_ratio_[1]:.2%})')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             
-            # Grid consistente
             plt.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
             
             ruta_grafica = directorio_graficas / 'clusters_2d_pca.png'
@@ -442,7 +422,6 @@ class VisualizadorClusters:
             n_ruido = np.sum(etiquetas_vis == -1)
             
             etiquetas_unicas = set(etiquetas_vis)
-            # Usar colormap consistente
             colores = plt.get_cmap(CMAP_CLUSTERING)(np.linspace(0, 1, len(etiquetas_unicas)))
             
             fig = plt.figure(figsize=config.FIGSIZE_3D)
@@ -459,14 +438,12 @@ class VisualizadorClusters:
                     ax.scatter(puntos[:, 0], puntos[:, 1], puntos[:, 2], 
                              c=[color], marker='o', s=SCATTER_SIZE, alpha=0.7, label=f'Cluster {etiqueta}')
             
-            # Título mejorado con información clave
             ax.set_title(f'{titulo}\nClusters: {n_clusters} | Ruido: {n_ruido} | Muestras: {len(X_vis):,}',
                         fontsize=14, pad=15)
             ax.set_xlabel(f'PC1 (Var: {pca_3d.explained_variance_ratio_[0]:.2%})')
             ax.set_ylabel(f'PC2 (Var: {pca_3d.explained_variance_ratio_[1]:.2%})')
             ax.set_zlabel(f'PC3 (Var: {pca_3d.explained_variance_ratio_[2]:.2%})')
             
-            # Corrección de proporciones
             x_range = np.ptp(X_vis[:, 0])
             y_range = np.ptp(X_vis[:, 1])
             z_range = np.ptp(X_vis[:, 2])
@@ -482,7 +459,6 @@ class VisualizadorClusters:
             
             ax.set_box_aspect([1,1,1])
             
-            # Ángulo de vista optimizado
             ax.view_init(elev=config.VIEW_ELEV, azim=config.VIEW_AZIM)
             
             ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.98))
@@ -554,7 +530,6 @@ class DetectorAnomalias:
             nn_model = NearestNeighbors(n_neighbors=1, metric='euclidean')
             nn_model.fit(X_escalado[indices_nucleo])
             
-            # Batching para datasets muy grandes (> 50k puntos)
             if len(X_escalado) > BATCH_SIZE:
                 logging.info(f"Dataset grande detectado ({len(X_escalado)} puntos), usando procesamiento por batches...")
                 scores_list = []
@@ -573,7 +548,6 @@ class DetectorAnomalias:
             scores[etiquetas == -1] = 1.0
             scores[etiquetas != -1] = 0.0
         
-        # Normalizar scores al rango [0, 1] usando función centralizada
         scores_normalizados = config.normalizar_scores_min_max(scores)
         
         return scores_normalizados
@@ -591,7 +565,6 @@ class DetectorAnomalias:
             datos_con_scores['is_outlier'] = (etiquetas == -1).astype(int)
             datos_con_scores['cluster_id'] = etiquetas
             
-            # Cambiar nombre de archivo a 'anomaly_scores.csv' (estandarización)
             ruta_scores = os.path.join(directorio_metricas, 'anomaly_scores.csv')
             datos_con_scores.to_csv(ruta_scores, index=False)
             logging.info(f"Scores de todos los puntos guardados en: {ruta_scores}")
@@ -601,7 +574,7 @@ class DetectorAnomalias:
                 'algoritmo': 'DBSCAN',
                 'params_json': f'{{"eps": {modelo.eps}, "min_samples": {modelo.min_samples}}}',
                 'n_clusters': len(set(etiquetas)) - (1 if -1 in etiquetas else 0),
-                'silhouette_score': None,  # Se calculará si hay clusters válidos
+                'silhouette_score': None,
                 'calinski_harabasz_score': None,
                 'davies_bouldin_score': None,
                 'pct_anomalias': np.mean(etiquetas == -1) * 100,
@@ -644,7 +617,6 @@ class DetectorAnomalias:
 
 
 def main():
-    # Iniciar tracking de tiempo y memoria
     tiempo_inicio = time.time()
     tracemalloc.start()
     
@@ -653,11 +625,9 @@ def main():
         gestor_directorios = GestorDirectorios(directorio_script)
         gestor_directorios.crear_directorios()
         
-        # Configurar logging
         ConfiguradorLogging.configurar_logging(gestor_directorios.directorio_metricas)
         logging.info("=== INICIANDO PROCESO DE CLUSTERING DBSCAN ===")
         
-        # Aplicar seeds para reproducibilidad
         config.aplicar_seeds_reproducibilidad(RANDOM_STATE)
         
         ruta_datos = directorio_script / 'data.csv'
@@ -727,10 +697,9 @@ def main():
         ruta_modelo_h5 = os.path.join(gestor_directorios.directorio_modelos, 'dbscan_model.h5')
         GuardadorModelos.guardar_modelo_h5(modelo_final, ruta_modelo_h5)
         
-        # Calcular métricas de rendimiento
         tiempo_total = time.time() - tiempo_inicio
         memoria_actual, memoria_pico = tracemalloc.get_traced_memory()
-        memoria_max = memoria_pico / 1024**2  # Convertir a MB
+        memoria_max = memoria_pico / 1024**2
         tracemalloc.stop()
         
         logging.info(f"Tiempo total de ejecucion: {tiempo_total:.2f} segundos")
