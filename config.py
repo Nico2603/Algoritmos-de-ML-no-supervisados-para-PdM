@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple
 import warnings
 
 RANDOM_STATE = 42
-
 MAX_MUESTRAS_OPTIMIZACION = 10000
 MAX_MUESTRAS_VISUALIZATION = 8000
 

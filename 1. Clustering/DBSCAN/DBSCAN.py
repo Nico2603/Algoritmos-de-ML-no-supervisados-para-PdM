@@ -661,24 +661,28 @@ def main():
         mascara_sin_ruido = etiquetas_finales != -1
         n_puntos_sin_ruido = np.sum(mascara_sin_ruido)
         
-        # Verificar que hay suficientes puntos y al menos 2 clusters
         if n_puntos_sin_ruido >= MIN_CLUSTERS_VALIDOS:
             X_sin_ruido = X_escalado[mascara_sin_ruido]
             etiquetas_sin_ruido = etiquetas_finales[mascara_sin_ruido]
             n_clusters_unicos = len(set(etiquetas_sin_ruido))
             
-            # Solo calcular métricas si hay al menos 2 clusters diferentes
             if n_clusters_unicos >= 2:
-                silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
-                calinski_harabasz_final = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
-                davies_bouldin_final = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
+                try:
+                    silhouette_final = silhouette_score(X_sin_ruido, etiquetas_sin_ruido)
+                    calinski_harabasz_final = calinski_harabasz_score(X_sin_ruido, etiquetas_sin_ruido)
+                    davies_bouldin_final = davies_bouldin_score(X_sin_ruido, etiquetas_sin_ruido)
+                except ValueError as e:
+                    logging.warning(f"Error calculando metricas: {e}. Asignando valores por defecto.")
+                    silhouette_final = -1.0
+                    calinski_harabasz_final = 0.0
+                    davies_bouldin_final = float('inf')
             else:
-                logging.warning(f"Solo se encontró 1 cluster único. No se pueden calcular métricas de clustering.")
+                logging.warning(f"Solo se encontro 1 cluster unico. No se pueden calcular metricas de clustering.")
                 silhouette_final = -1.0
                 calinski_harabasz_final = 0.0
                 davies_bouldin_final = float('inf')
         else:
-            logging.warning(f"Puntos sin ruido insuficientes ({n_puntos_sin_ruido}). Usando métricas de búsqueda.")
+            logging.warning(f"Puntos sin ruido insuficientes ({n_puntos_sin_ruido}). Usando metricas de busqueda.")
             silhouette_final = mejor_resultado['silhouette']
             calinski_harabasz_final = mejor_resultado['calinski_harabasz']
             davies_bouldin_final = mejor_resultado['davies_bouldin']
