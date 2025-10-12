@@ -1,0 +1,2 @@
+algoritmo,params_json,n_clusters,silhouette_score,calinski_harabasz_score,davies_bouldin_score,pct_anomalias,p95_minus_p50,mean_score,tiempo_ejecucion_s,memoria_max_mb
+CBLOF,"{'n_clusters': 5, 'alpha': 0.8, 'beta': 5, 'use_weights': True}",5,,,,10.0,0.36430359871617324,0.48018160370540497,18.01902985572815,92.59238243103027

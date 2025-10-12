@@ -1,0 +1,11 @@
+Métrica,DBSCAN,K-Means
+Algoritmo,DBSCAN,K-Means
+Número de Clusters,30034,2
+Silhouette Score,-0.3210,0.3086
+Calinski-Harabasz Score,87.7703,266441.7188
+Davies-Bouldin Index,0.8273,1.3107
+Porcentaje de Anomalías (%),29.21,5.00
+Separación de Scores (P95-P50),0.3728,0.3459
+Score Promedio,0.0972,0.5089
+Tiempo de Ejecución (s),140.22,9.79
+Memoria Máxima (MB),20708.87,184.76

@@ -1,0 +1,18 @@
+=== MÉTRICAS DEL MODELO ISOLATION FOREST ===
+
+Mejores parámetros: {'contamination': 0.1, 'max_features': 1.0, 'max_samples': 'auto', 'n_estimators': 50}
+
+Métricas de optimización:
+Separación de scores (P95-P50): 0.3883
+Desviación estándar de scores: 0.1929
+Media de scores: 0.3842
+
+Métricas de anomalías:
+Número de anomalías detectadas: 51839
+Porcentaje de anomalías detectadas: 9.9998%
+Media de puntuaciones de anomalía: 0.3842
+
+Estadísticas de puntuaciones:
+Score mínimo: 0.0000
+Score máximo: 1.0000
+Desviación estándar: 0.1929

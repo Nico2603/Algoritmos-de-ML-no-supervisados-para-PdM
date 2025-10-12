@@ -165,13 +165,13 @@ Write-Host ""
 
 # 3.1 K-Means
 Write-Host "  >> Ejecutando K-Means..." -ForegroundColor $ColorInfo
-$KMeansPath = Join-Path $ScriptDir "1. Clustering\K-means\K-means.py"
+$KMeansPath = Join-Path $ScriptDir "clustering\K-means\K-means.py"
 RunStep "K-Means" $KMeansPath
 Write-Host ""
 
 # 3.2 DBSCAN
 Write-Host "  >> Ejecutando DBSCAN..." -ForegroundColor $ColorInfo
-$DBSCANPath = Join-Path $ScriptDir "1. Clustering\DBSCAN\DBSCAN.py"
+$DBSCANPath = Join-Path $ScriptDir "clustering\DBSCAN\DBSCAN.py"
 RunStep "DBSCAN" $DBSCANPath
 Write-Host ""
 
@@ -183,13 +183,13 @@ Write-Host ""
 
 # 4.1 Isolation Forest
 Write-Host "  >> Ejecutando Isolation Forest..." -ForegroundColor $ColorInfo
-$IForestPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\Isolation Forest\Isolation Forest.py"
+$IForestPath = Join-Path $ScriptDir "deteccion_anomalias\Isolation Forest\Isolation Forest.py"
 RunStep "Isolation Forest" $IForestPath
 Write-Host ""
 
 # 4.2 CBLOF
 Write-Host "  >> Ejecutando CBLOF..." -ForegroundColor $ColorInfo
-$CBLOFPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\CBLOF\CBLOF.PY"
+$CBLOFPath = Join-Path $ScriptDir "deteccion_anomalias\CBLOF\CBLOF.PY"
 RunStep "CBLOF" $CBLOFPath
 Write-Host ""
 
@@ -201,13 +201,13 @@ Write-Host ""
 
 # 5.1 Comparacion Clustering
 Write-Host "  >> Comparando Algoritmos de Clustering (K-Means vs DBSCAN)..." -ForegroundColor $ColorInfo
-$CompClusteringPath = Join-Path $ScriptDir "1. Clustering\Comparaciones\comparar_algoritmos.py"
+$CompClusteringPath = Join-Path $ScriptDir "clustering\Comparaciones\comparar_algoritmos.py"
 RunStep "Comparacion de Clustering" $CompClusteringPath
 Write-Host ""
 
 # 5.2 Comparacion Deteccion de Anomalias
 Write-Host "  >> Comparando Algoritmos de Deteccion de Anomalias (Isolation Forest vs CBLOF)..." -ForegroundColor $ColorInfo
-$CompAnomaliesPath = Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\comparar_algoritmos.py"
+$CompAnomaliesPath = Join-Path $ScriptDir "deteccion_anomalias\Comparaciones\comparar_algoritmos.py"
 RunStep "Comparacion de Deteccion de Anomalias" $CompAnomaliesPath
 Write-Host ""
 
@@ -222,14 +222,14 @@ Write-Host " RESUMEN DE EJECUCION" -ForegroundColor $ColorExito
 Write-Host "=" * 100 -ForegroundColor $ColorExito
 Write-Host ""
 
-# Verificar archivos generados
+# Verificar archivos generados (6 archivos clave)
 $ArchivosEsperados = @(
-    (Join-Path $ScriptDir "1. Clustering\K-means\metricas_KMeans\metrics.csv"),
-    (Join-Path $ScriptDir "1. Clustering\DBSCAN\metricas_DBSCAN\metrics.csv"),
-    (Join-Path $ScriptDir "2. Deteccion de Anomalias\Isolation Forest\metricas_IForest\metrics.csv"),
-    (Join-Path $ScriptDir "2. Deteccion de Anomalias\CBLOF\metricas_CBLOF\metrics.csv"),
-    (Join-Path $ScriptDir "1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt"),
-    (Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")
+    (Join-Path $ScriptDir "clustering\K-means\metricas_KMeans\metrics.csv"),
+    (Join-Path $ScriptDir "clustering\DBSCAN\metricas_DBSCAN\metrics.csv"),
+    (Join-Path $ScriptDir "deteccion_anomalias\Isolation Forest\metricas_IForest\metrics.csv"),
+    (Join-Path $ScriptDir "deteccion_anomalias\CBLOF\metricas_CBLOF\metrics.csv"),
+    (Join-Path $ScriptDir "clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt"),
+    (Join-Path $ScriptDir "deteccion_anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")
 )
 
 $ArchivosGenerados = 0
@@ -280,8 +280,8 @@ Write-Host "Log completo guardado en: $LogFile" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host "REPORTES FINALES GENERADOS:" -ForegroundColor $(if ($ExitCodeFinal -eq 0) { $ColorExito } else { $ColorAdvertencia })
-Write-Host "  1. Comparacion Clustering: $(Join-Path $ScriptDir "1. Clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt")" -ForegroundColor $ColorInfo
-Write-Host "  2. Comparacion Deteccion de Anomalias: $(Join-Path $ScriptDir "2. Deteccion de Anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")" -ForegroundColor $ColorInfo
+Write-Host "  1. Comparacion Clustering: $(Join-Path $ScriptDir "clustering\Comparaciones\REPORTE_COMPARACION_CLUSTERING.txt")" -ForegroundColor $ColorInfo
+Write-Host "  2. Comparacion Deteccion de Anomalias: $(Join-Path $ScriptDir "deteccion_anomalias\Comparaciones\REPORTE_COMPARACION_DETECCION_ANOMALIAS.txt")" -ForegroundColor $ColorInfo
 Write-Host ""
 
 Write-Host ""

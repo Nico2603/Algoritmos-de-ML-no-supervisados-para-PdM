@@ -1,0 +1,13 @@
+=== RESULTADOS CLUSTERING K-MEANS ===
+
+Mejores parámetros:
+  - k_clusters: 2
+
+Resultados del clustering:
+  - Número de clusters: 2
+  - Inercia (SSE): 103831.48
+
+Métricas de calidad:
+  - Coeficiente Silhouette: 0.3086
+  - Calinski-Harabasz Score: 266441.7188
+  - Davies-Bouldin Index: 1.3107

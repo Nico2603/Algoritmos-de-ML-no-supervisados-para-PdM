@@ -2,21 +2,23 @@ import numpy as np
 import pandas as pd
 import multiprocessing
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
 from typing import List, Optional, Tuple
 import warnings
 
 RANDOM_STATE = 42
-MAX_MUESTRAS_OPTIMIZACION = 10000
-MAX_MUESTRAS_VISUALIZATION = 3000
+SAMPLE_OPT = 5000  # Muestras para optimización de hiperparámetros
+SAMPLE_VIS = 3000  # Muestras para visualización
+MAX_MUESTRAS_OPTIMIZACION = SAMPLE_OPT  # Alias para compatibilidad
+MAX_MUESTRAS_VISUALIZATION = SAMPLE_VIS  # Alias para compatibilidad
 SILHOUETTE_SAMPLE = 5000  # Muestra para calcular Silhouette (evita O(n²))
+N_JOBS = 2  # Paralelismo moderado
 
 # Ruta centralizada del archivo de datos (compartido por todos los algoritmos)
 RUTA_DATOS_COMPARTIDA = 'data.csv'
 
-try:
-    N_JOBS_PARALELO = min(2, max(1, multiprocessing.cpu_count() // 2))
-except:
-    N_JOBS_PARALELO = 1
+# Alias para compatibilidad con código existente
+N_JOBS_PARALELO = N_JOBS
 
 CMAP_CLUSTERING = 'tab10'
 
@@ -56,6 +58,15 @@ KMEANS_K_MAX = 6
 NORMALIZAR_SCORES_ANOMALIA = True
 
 def normalizar_scores_min_max(scores: np.ndarray) -> np.ndarray:
+    """
+    Normaliza scores al rango [0, 1] usando min-max scaling.
+    
+    Args:
+        scores: Array de scores a normalizar
+        
+    Returns:
+        Array de scores normalizados en el rango [0, 1]
+    """
     min_score = np.min(scores)
     max_score = np.max(scores)
     
@@ -65,6 +76,42 @@ def normalizar_scores_min_max(scores: np.ndarray) -> np.ndarray:
     scores_normalizados = (scores - min_score) / (max_score - min_score)
     
     return scores_normalizados
+
+def normalizar_con_minmax(X: np.ndarray) -> Tuple[np.ndarray, MinMaxScaler]:
+    """
+    Normaliza características usando MinMaxScaler al rango [0, 1].
+    
+    Args:
+        X: Matriz de características a normalizar
+        
+    Returns:
+        Tupla con (X_normalizado, scaler_ajustado)
+    """
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    X_normalizado = scaler.fit_transform(X)
+    return X_normalizado, scaler
+
+def crear_muestra_reproducible(X: np.ndarray, seed: int = RANDOM_STATE, 
+                                max_muestras: int = None) -> np.ndarray:
+    """
+    Crea una muestra reproducible de índices para muestreo consistente.
+    
+    Args:
+        X: Matriz de características completa
+        seed: Semilla para reproducibilidad
+        max_muestras: Número máximo de muestras. Si None, retorna todos los índices
+        
+    Returns:
+        Array de índices ordenados para muestreo
+    """
+    if max_muestras is None or len(X) <= max_muestras:
+        return np.arange(len(X))
+    
+    np.random.seed(seed)
+    indices = np.random.choice(len(X), size=max_muestras, replace=False)
+    indices = np.sort(indices)
+    
+    return indices
 
 def validar_datos_entrada(datos: pd.DataFrame, caracteristicas: List[str]) -> None:
     if len(datos) < 100:
@@ -153,10 +200,13 @@ def muestrear_datos_consistente(
     
     return indices
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 __author__ = 'Proyecto ML PdM'
 __all__ = [
     'RANDOM_STATE',
+    'SAMPLE_OPT',
+    'SAMPLE_VIS',
+    'N_JOBS',
     'MAX_MUESTRAS_OPTIMIZACION',
     'MAX_MUESTRAS_VISUALIZATION',
     'N_JOBS_PARALELO',
@@ -185,6 +235,8 @@ __all__ = [
     'KMEANS_K_MAX',
     'NORMALIZAR_SCORES_ANOMALIA',
     'normalizar_scores_min_max',
+    'normalizar_con_minmax',
+    'crear_muestra_reproducible',
     'validar_datos_entrada',
     'aplicar_pca_consistente',
     'aplicar_seeds_reproducibilidad',
